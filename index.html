@@ -19,8 +19,11 @@
   <main class="app" id="app">
     <!-- Временная страница для согласования вида (шаг 2). Заменится в шаге 7. -->
     <header class="day-head">
-      <div class="day-num">23</div>
-      <div class="day-meta"><div class="wd">Понедельник</div><div class="mo">ноябрь 2026</div></div>
+      <div class="day-badge" id="ring"><div class="day-num">23</div></div>
+      <div class="day-meta">
+        <div class="wd">Понедельник</div><div class="mo">ноябрь 2026</div>
+        <div class="sum">Сделано <b>1 из 4</b></div>
+      </div>
     </header>
 
     <section class="panel">
@@ -39,7 +42,7 @@
     <section class="panel">
       <div class="panel-title"><i data-icon="target" data-size="18"></i>Цель недели</div>
       <div class="goal"><b>Прочитать 2 книги</b><span>1 / 2</span></div>
-      <div class="progress"><i style="width:50%"></i></div>
+      <div id="liquid"></div>
     </section>
 
     <section class="panel">
@@ -49,14 +52,18 @@
         <div class="swatch" style="background:var(--lilac)">Сирень</div>
         <div class="swatch" style="background:var(--peri)">Барвинок</div>
         <div class="swatch" style="background:var(--mint)">Мята</div>
-        <div class="swatch" style="background:var(--peach)">Персик</div>
-        <div class="swatch" style="background:var(--accent);color:#fff">Акцент</div>
+        <div class="swatch" style="background:var(--apricot)">Абрикос</div>
+        <div class="swatch" style="background:var(--plum);color:#fff">Слива</div>
+        <div class="swatch" style="background:var(--accent);color:#fff">Опал</div>
       </div>
     </section>
   </main>
   <script type="module">
     import { hydrateIcons } from './js/ui/icons.js';
+    import { dayRing, liquidBar } from './js/ui/progress.js';
     hydrateIcons();
+    document.getElementById('ring').insertAdjacentHTML('afterbegin', dayRing(25));
+    document.getElementById('liquid').innerHTML = liquidBar(50);
   </script>
 </body>
 </html>

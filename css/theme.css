@@ -8,18 +8,21 @@
   --ink-3: #a59dbb;
   --line: rgba(47, 39, 66, 0.08);
 
-  /* пастель для «северного сияния» и меток */
-  --rose: #ffd3e4;
-  --lilac: #e3d6ff;
-  --peri: #d2e2ff;
-  --mint: #cff3e4;
-  --peach: #ffe1d2;
+  /* пастель для меток и плашек */
+  --rose: #fbd5e3;
+  --lilac: #e4dbff;
+  --peri: #d5e1fb;
+  --mint: #d2f0e3;
+  --apricot: #ffe6cf;
 
-  /* акцент: только главные действия и прогресс */
-  --violet: #8f6ff0;
-  --rose-strong: #ef86b1;
-  --accent: linear-gradient(120deg, #a38bff 0%, #ef86b1 100%);
-  --red-date: #ec5f88;
+  /* акцент: «опаловый» перелив сирень → роза → персик */
+  --g1: #9d86f7;
+  --g2: #e98bc0;
+  --g3: #ffb38f;
+  --violet: #8a6cf0;
+  --accent: linear-gradient(110deg, var(--g1) 0%, var(--g2) 60%, var(--g3) 100%);
+  --red-date: #e8577f;
+  --plum: #3a2a57;         /* главная кнопка */
 
   --glass: rgba(255, 255, 255, 0.5);
   --glass-edge: rgba(255, 255, 255, 0.9);
