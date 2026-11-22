@@ -3,48 +3,60 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#f6e6ff">
+  <meta name="theme-color" content="#fbf8ff">
   <title>Мой планер</title>
   <link rel="stylesheet" href="css/theme.css">
   <link rel="stylesheet" href="css/layout.css">
 </head>
 <body>
   <nav class="nav">
-    <a href="#/today" class="active"><span>🌸</span>Сегодня</a>
-    <a href="#/week"><span>🗓️</span>Неделя</a>
-    <a href="#/month"><span>📅</span>Месяц</a>
-    <a href="#/images"><span>🐱</span>Картинки</a>
+    <a href="#/today" class="active"><i data-icon="sun"></i>Сегодня</a>
+    <a href="#/week"><i data-icon="week"></i>Неделя</a>
+    <a href="#/month"><i data-icon="month"></i>Месяц</a>
+    <a href="#/images"><i data-icon="gallery"></i>Картинки</a>
   </nav>
 
   <main class="app" id="app">
-    <!-- Временная страница для согласования палитры (шаг 2). Заменится в шаге 7. -->
-    <h1 style="margin:8px 0 4px">Мой планер</h1>
-    <p style="color:var(--ink-soft);margin:0 0 18px">Понедельник, 23 ноября</p>
+    <!-- Временная страница для согласования вида (шаг 2). Заменится в шаге 7. -->
+    <header class="day-head">
+      <div class="day-num">23</div>
+      <div class="day-meta"><div class="wd">Понедельник</div><div class="mo">ноябрь 2026</div></div>
+    </header>
 
-    <section class="card">
-      <div class="task"><div class="check"></div><span class="time">09:00</span><span>Йога</span></div>
-      <div class="task"><div class="check done">✓</div><span class="time">11:30</span><span class="done-text">Позвонить маме</span></div>
-      <div class="task"><div class="check"></div><span class="time">15:00</span><span>Дописать отчёт</span><span class="badge">↻ перенесено</span></div>
-      <div style="margin-top:12px"><button class="btn">+ Задача</button> <button class="btn soft">История</button></div>
+    <section class="panel">
+      <div class="timeline">
+        <div class="row"><span class="t">09:00</span><button class="check" aria-label="Отметить"></button><span class="title">Йога</span></div>
+        <div class="row done"><span class="t">11:30</span><button class="check" aria-label="Снять отметку"><i data-icon="check" data-size="14"></i></button><span class="title">Позвонить маме</span></div>
+        <div class="row"><span class="t">15:00</span><button class="check" aria-label="Отметить"></button><span class="title">Дописать отчёт<span class="tag"><i data-icon="carried" data-size="12"></i>перенесено</span></span></div>
+        <div class="row"><span class="t"></span><button class="check" aria-label="Отметить"></button><span class="title">Купить корм котику</span></div>
+      </div>
+      <div class="actions">
+        <button class="btn"><i data-icon="plus" data-size="18"></i>Задача</button>
+        <button class="btn ghost"><i data-icon="history" data-size="18"></i>История</button>
+      </div>
     </section>
 
-    <section class="card">
-      <h3 style="margin-bottom:8px">🎯 Цель недели: прочитать 2 книги</h3>
+    <section class="panel">
+      <div class="panel-title"><i data-icon="target" data-size="18"></i>Цель недели</div>
+      <div class="goal"><b>Прочитать 2 книги</b><span>1 / 2</span></div>
       <div class="progress"><i style="width:50%"></i></div>
     </section>
 
-    <section class="card">
-      <h3 style="margin-bottom:12px">Палитра</h3>
+    <section class="panel">
+      <div class="panel-title">Палитра</div>
       <div class="swatches">
-        <div class="swatch" style="background:var(--peach)">Персик</div>
-        <div class="swatch" style="background:var(--lavender)">Лаванда</div>
+        <div class="swatch" style="background:var(--rose)">Роза</div>
+        <div class="swatch" style="background:var(--lilac)">Сирень</div>
+        <div class="swatch" style="background:var(--peri)">Барвинок</div>
         <div class="swatch" style="background:var(--mint)">Мята</div>
-        <div class="swatch" style="background:var(--pink)">Розовый</div>
-        <div class="swatch" style="background:var(--sky)">Голубой</div>
-        <div class="swatch" style="background:var(--butter)">Ванильный</div>
-        <div class="swatch" style="background:var(--red-date);color:#fff">Красная дата</div>
+        <div class="swatch" style="background:var(--peach)">Персик</div>
+        <div class="swatch" style="background:var(--accent);color:#fff">Акцент</div>
       </div>
     </section>
   </main>
+  <script type="module">
+    import { hydrateIcons } from './js/ui/icons.js';
+    hydrateIcons();
+  </script>
 </body>
 </html>

@@ -1,48 +1,66 @@
-@import url('https://fonts.googleapis.com/css2?family=Comfortaa:wght@500;700&family=Nunito:wght@400;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600&family=Unbounded:wght@300;400;500&display=swap');
 
 :root {
-  /* пастельная палитра */
-  --peach: #ffd9c7;
-  --peach-deep: #f7a98b;
-  --lavender: #e4d9ff;
-  --lavender-deep: #a993e8;
-  --mint: #d3f4e6;
-  --mint-deep: #7fcfae;
-  --pink: #ffdbe7;
-  --pink-deep: #f28bab;
-  --sky: #d6ebff;
-  --sky-deep: #82b6ea;
-  --butter: #fff3c4;
+  /* основа */
+  --paper: #fbf8ff;        /* лилово-белый фон */
+  --ink: #2f2742;          /* сливовые чернила */
+  --ink-2: #6e6585;
+  --ink-3: #a59dbb;
+  --line: rgba(47, 39, 66, 0.08);
 
-  --red-date: #f0708f;
-  --ink: #4a3f5c;          /* основной текст: тёмная слива */
-  --ink-soft: #8a7f9c;
-  --card: rgba(255, 255, 255, 0.78);
-  --card-solid: #ffffff;
-  --line: rgba(74, 63, 92, 0.1);
-  --shadow: 0 6px 24px rgba(169, 147, 232, 0.18);
-  --radius: 20px;
-  --radius-sm: 12px;
+  /* пастель для «северного сияния» и меток */
+  --rose: #ffd3e4;
+  --lilac: #e3d6ff;
+  --peri: #d2e2ff;
+  --mint: #cff3e4;
+  --peach: #ffe1d2;
 
-  --bg: linear-gradient(160deg, #ffe9e0 0%, #f6e6ff 38%, #e3f1ff 70%, #e6faf1 100%);
-  --grad-accent: linear-gradient(135deg, var(--pink-deep), var(--lavender-deep));
+  /* акцент: только главные действия и прогресс */
+  --violet: #8f6ff0;
+  --rose-strong: #ef86b1;
+  --accent: linear-gradient(120deg, #a38bff 0%, #ef86b1 100%);
+  --red-date: #ec5f88;
 
-  --font-head: 'Comfortaa', 'Nunito', system-ui, sans-serif;
-  --font-body: 'Nunito', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --glass: rgba(255, 255, 255, 0.5);
+  --glass-edge: rgba(255, 255, 255, 0.9);
+  --shadow: 0 1px 2px rgba(80, 60, 140, 0.05), 0 12px 32px -12px rgba(120, 90, 200, 0.22);
+
+  --r-panel: 28px;
+  --r-ctrl: 14px;
+
+  --f-display: 'Unbounded', 'Onest', system-ui, sans-serif;
+  --f-body: 'Onest', system-ui, -apple-system, 'Segoe UI', sans-serif;
   color-scheme: light;
 }
 
-html { background: #f6e6ff; }
+html { background: var(--paper); }
 body {
   margin: 0;
   min-height: 100dvh;
-  background: var(--bg) fixed;
+  background: transparent; /* фон рисует body::before */
   color: var(--ink);
-  font-family: var(--font-body);
+  font-family: var(--f-body);
   font-size: 16px;
-  line-height: 1.45;
+  line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   -webkit-tap-highlight-color: transparent;
 }
-h1, h2, h3 { font-family: var(--font-head); font-weight: 700; margin: 0; letter-spacing: -0.01em; }
+
+/* мягкое «северное сияние» за контентом */
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  z-index: -1;
+  background:
+    radial-gradient(70% 45% at 0% 0%, #ffc4dc 0%, transparent 65%),
+    radial-gradient(65% 45% at 100% 8%, #d9c6ff 0%, transparent 65%),
+    radial-gradient(70% 50% at 100% 100%, #c2d8ff 0%, transparent 65%),
+    radial-gradient(65% 45% at 0% 95%, #bff0da 0%, transparent 65%),
+    var(--paper);
+}
+
+h1, h2, h3 { margin: 0; font-weight: 400; }
 button, input, select, textarea { font: inherit; color: inherit; }
+.ico { flex: none; display: block; }
+:focus-visible { outline: 2px solid var(--violet); outline-offset: 2px; border-radius: 8px; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
