@@ -1,0 +1,48 @@
+@import url('https://fonts.googleapis.com/css2?family=Comfortaa:wght@500;700&family=Nunito:wght@400;600;700&display=swap');
+
+:root {
+  /* пастельная палитра */
+  --peach: #ffd9c7;
+  --peach-deep: #f7a98b;
+  --lavender: #e4d9ff;
+  --lavender-deep: #a993e8;
+  --mint: #d3f4e6;
+  --mint-deep: #7fcfae;
+  --pink: #ffdbe7;
+  --pink-deep: #f28bab;
+  --sky: #d6ebff;
+  --sky-deep: #82b6ea;
+  --butter: #fff3c4;
+
+  --red-date: #f0708f;
+  --ink: #4a3f5c;          /* основной текст: тёмная слива */
+  --ink-soft: #8a7f9c;
+  --card: rgba(255, 255, 255, 0.78);
+  --card-solid: #ffffff;
+  --line: rgba(74, 63, 92, 0.1);
+  --shadow: 0 6px 24px rgba(169, 147, 232, 0.18);
+  --radius: 20px;
+  --radius-sm: 12px;
+
+  --bg: linear-gradient(160deg, #ffe9e0 0%, #f6e6ff 38%, #e3f1ff 70%, #e6faf1 100%);
+  --grad-accent: linear-gradient(135deg, var(--pink-deep), var(--lavender-deep));
+
+  --font-head: 'Comfortaa', 'Nunito', system-ui, sans-serif;
+  --font-body: 'Nunito', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  color-scheme: light;
+}
+
+html { background: #f6e6ff; }
+body {
+  margin: 0;
+  min-height: 100dvh;
+  background: var(--bg) fixed;
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+}
+h1, h2, h3 { font-family: var(--font-head); font-weight: 700; margin: 0; letter-spacing: -0.01em; }
+button, input, select, textarea { font: inherit; color: inherit; }
