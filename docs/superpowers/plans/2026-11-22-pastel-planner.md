@@ -13,7 +13,7 @@
 ## Global Constraints
 
 - Весь интерфейс на русском. Неделя начинается с понедельника.
-- Только светлая пастельная тема с градиентами (персиковый, лавандовый, мятный, нежно-розовый, голубой), тёмной темы нет.
+- Три светлые темы (`opal`, `peach`, `mint`) через `data-theme` на `<html>` и CSS-токены в `css/theme.css`; тёмной нет. Иконки только SVG из `js/ui/icons.js`, никаких эмодзи в интерфейсе. Прогресс дня — `createDayRing`, прогресс цели — `createLiquid` из `js/ui/progress.js`.
 - Сначала мобильная вёрстка: зоны нажатия от 44px, без горизонтальной прокрутки при ширине 375px. На телефоне нижняя панель «Сегодня · Неделя · Месяц · Картинки», на компьютере (≥ 900px) боковое меню.
 - Даты на клиенте всегда в **локальном** времени через `js/dates.js`. `toISOString()` для дат дня запрещён.
 - RLS включён на всех таблицах и в bucket `images`, правило `user_id = auth.uid()`.
@@ -123,7 +123,7 @@ pastel-planner/
   - `special_dates(date date, title text, kind text check in ('red','deadline'), color text, yearly bool default false)`
   - `images(kind text check in ('photo','link','quote'), storage_path text, url text, text text, category text, created_at)`
   - `push_subscriptions(endpoint text unique, p256dh text, auth text, created_at)`
-  - `settings(user_id uuid pk, tz text default 'Europe/Moscow', last_rollover_date date)`
+  - `settings(user_id uuid pk, tz text default 'Europe/Moscow', theme text default 'opal' check in ('opal','peach','mint'), last_rollover_date date)`
   - Триггер `tasks_history` AFTER UPDATE пишет строку в `task_history` для каждого изменившегося поля из `title, date, time, note`.
   - Триггер `touch_updated_at` BEFORE UPDATE на изменяемых таблицах.
 - Produces (`tests/db/harness.js`): `async makeDb() -> PGlite`. Создаёт заглушки `auth.users(id uuid pk)` и `auth.uid()` = `nullif(current_setting('request.jwt.claim.sub', true),'')::uuid`, роль `authenticated`, затем применяет все `supabase/migrations/*.sql`, кроме `007_cron.sql` и `008_storage.sql` (в PGlite нет pg_cron и схемы storage). `async asUser(db, uid, fn)` выполняет `fn` в транзакции с `set local role authenticated` и `set local request.jwt.claim.sub`.

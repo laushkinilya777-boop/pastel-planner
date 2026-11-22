@@ -1,12 +1,15 @@
 @import url('https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600&family=Unbounded:wght@300;400;500&display=swap');
 
+/* ── Тема «Опал» (по умолчанию): сирень, роза, абрикос ── */
 :root {
-  /* основа */
-  --paper: #fbf8ff;        /* лилово-белый фон */
-  --ink: #2f2742;          /* сливовые чернила */
+  --paper: #fbf8ff;
+  --ink: #2f2742;
   --ink-2: #6e6585;
   --ink-3: #a59dbb;
   --line: rgba(47, 39, 66, 0.08);
+
+  /* пятна «северного сияния» на фоне */
+  --b1: #ffc4dc; --b2: #d9c6ff; --b3: #c2d8ff; --b4: #bff0da;
 
   /* пастель для меток и плашек */
   --rose: #fbd5e3;
@@ -14,26 +17,53 @@
   --peri: #d5e1fb;
   --mint: #d2f0e3;
   --apricot: #ffe6cf;
+  --tag-bg: #e4dbff; --tag-ink: #7a5ad6;
 
-  /* акцент: «опаловый» перелив сирень → роза → персик */
-  --g1: #9d86f7;
-  --g2: #e98bc0;
-  --g3: #ffb38f;
-  --violet: #8a6cf0;
-  --accent: linear-gradient(110deg, var(--g1) 0%, var(--g2) 60%, var(--g3) 100%);
+  /* акцентный перелив */
+  --g1: #9d86f7; --g2: #e98bc0; --g3: #ffb38f;
+  --violet: #8a6cf0;           /* иконки активного меню, фокус */
+  --plum: #3a2a57;             /* главная кнопка */
   --red-date: #e8577f;
-  --plum: #3a2a57;         /* главная кнопка */
+  --tint: 120, 90, 200;        /* цвет теней */
 
+  --accent: linear-gradient(110deg, var(--g1) 0%, var(--g2) 60%, var(--g3) 100%);
   --glass: rgba(255, 255, 255, 0.5);
   --glass-edge: rgba(255, 255, 255, 0.9);
-  --shadow: 0 1px 2px rgba(80, 60, 140, 0.05), 0 12px 32px -12px rgba(120, 90, 200, 0.22);
+  --shadow: 0 1px 2px rgba(var(--tint), 0.06), 0 12px 32px -12px rgba(var(--tint), 0.25);
 
   --r-panel: 28px;
   --r-ctrl: 14px;
-
   --f-display: 'Unbounded', 'Onest', system-ui, sans-serif;
   --f-body: 'Onest', system-ui, -apple-system, 'Segoe UI', sans-serif;
   color-scheme: light;
+}
+
+/* ── Тема «Персиковый закат»: тёплая, уютная ── */
+:root[data-theme="peach"] {
+  --paper: #fff8f3;
+  --ink: #3d2a2e; --ink-2: #7d6266; --ink-3: #bca3a6;
+  --line: rgba(61, 42, 46, 0.08);
+  --b1: #ffc6b0; --b2: #ffe3a6; --b3: #ffc3d4; --b4: #f3d8ff;
+  --rose: #ffd6df; --lilac: #f6e0f2; --peri: #ffe9d6; --mint: #fff0c9; --apricot: #ffdcc8;
+  --tag-bg: #ffe0d2; --tag-ink: #c2603e;
+  --g1: #ff9a78; --g2: #f57fa3; --g3: #ffc566;
+  --violet: #e46f7f;
+  --plum: #5b2c37;
+  --tint: 220, 120, 100;
+}
+
+/* ── Тема «Мятное утро»: свежая, спокойная ── */
+:root[data-theme="mint"] {
+  --paper: #f5fbfa;
+  --ink: #213538; --ink-2: #5d7477; --ink-3: #9fb4b5;
+  --line: rgba(33, 53, 56, 0.08);
+  --b1: #b8eedb; --b2: #c4e2ff; --b3: #dcf5c4; --b4: #d9d3ff;
+  --rose: #d6f2e8; --lilac: #dcdaff; --peri: #d3e8ff; --mint: #cdf2e2; --apricot: #e8f6cf;
+  --tag-bg: #d4f1e6; --tag-ink: #2b8a6e;
+  --g1: #4fc9a8; --g2: #66aef0; --g3: #a58cf5;
+  --violet: #2fa184;
+  --plum: #1d3c44;
+  --tint: 60, 150, 140;
 }
 
 html { background: var(--paper); }
@@ -55,11 +85,12 @@ body::before {
   position: fixed; inset: 0;
   z-index: -1;
   background:
-    radial-gradient(70% 45% at 0% 0%, #ffc4dc 0%, transparent 65%),
-    radial-gradient(65% 45% at 100% 8%, #d9c6ff 0%, transparent 65%),
-    radial-gradient(70% 50% at 100% 100%, #c2d8ff 0%, transparent 65%),
-    radial-gradient(65% 45% at 0% 95%, #bff0da 0%, transparent 65%),
+    radial-gradient(70% 45% at 0% 0%, var(--b1) 0%, transparent 65%),
+    radial-gradient(65% 45% at 100% 8%, var(--b2) 0%, transparent 65%),
+    radial-gradient(70% 50% at 100% 100%, var(--b3) 0%, transparent 65%),
+    radial-gradient(65% 45% at 0% 95%, var(--b4) 0%, transparent 65%),
     var(--paper);
+  transition: background .6s ease;
 }
 
 h1, h2, h3 { margin: 0; font-weight: 400; }
