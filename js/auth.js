@@ -1,7 +1,7 @@
 // Вход: почта + пароль. В первый раз (и если пароль забыт) — ссылка из письма,
 // после неё сайт просит придумать пароль.
 import { client } from './supabase.js';
-import { isValidEmail, passwordProblem } from './auth-utils.js';
+import { isValidEmail, passwordProblem, linkErrorMessage } from './auth-utils.js';
 import { icon } from './ui/icons.js';
 
 const redirectTo = () => location.origin + location.pathname;
@@ -52,7 +52,12 @@ export function renderAuth(root) {
     if (!isValidEmail(email)) { err.textContent = 'Проверь почту: похоже, в ней опечатка'; return; }
     if (!f.pw.value) { err.textContent = 'Введи пароль'; return; }
     btn.disabled = true; btn.textContent = 'Входим…';
-    const { error } = await client.auth.signInWithPassword({ email, password: f.pw.value });
+    const { data, error } = await client.auth.signInWithPassword({ email, password: f.pw.value });
+    // вошла паролем — значит, пароль есть (на случай, если аккаунт создан в панели Supabase)
+    if (!error && !data.user?.user_metadata?.has_password) {
+      try { sessionStorage.setItem('pw-later', '1'); } catch { /* ничего */ } // не предлагать придумать пароль
+      client.auth.updateUser({ data: { has_password: true } }).catch(() => {});
+    }
     if (error) {
       btn.disabled = false; btn.textContent = 'Войти';
       err.textContent = /invalid login/i.test(error.message)
@@ -81,11 +86,7 @@ function renderLinkLogin(root, emailPrefill = '') {
     const { error } = await client.auth.signInWithOtp({ email, options: { shouldCreateUser: false, emailRedirectTo: redirectTo() } });
     btn.disabled = false; btn.textContent = 'Прислать ссылку';
     if (error) {
-      err.textContent = /signups? not allowed|not found/i.test(error.message)
-        ? 'Этот планер личный: вход только для хозяйки'
-        : /rate|seconds/i.test(error.message)
-          ? 'Письмо уже отправлено. Подожди минуту и попробуй снова'
-          : 'Не получилось отправить письмо. Проверь интернет и попробуй ещё раз';
+      err.textContent = linkErrorMessage(error.message);
       return;
     }
     root.querySelector('.auth-sub').textContent = `Письмо отправлено на ${email}. Открой его на этом устройстве и нажми ссылку`;

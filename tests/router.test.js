@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { parseRoute } from '../js/router.js';
-import { isValidEmail, passwordProblem, needsPassword } from '../js/auth-utils.js';
+import { isValidEmail, passwordProblem, needsPassword, linkErrorMessage } from '../js/auth-utils.js';
 
 test('parseRoute: пусто и неизвестное -> today', () => {
   assert.deepEqual(parseRoute(''), { name: 'today', params: {} });
@@ -37,4 +37,11 @@ test('needsPassword: после входа по ссылке без пароля
   assert.equal(needsPassword({ user_metadata: {} }), true);
   assert.equal(needsPassword({ user_metadata: { has_password: true } }), false);
   assert.equal(needsPassword(null), false);
+});
+
+test('linkErrorMessage: лимит писем Supabase — про час, а не про минуту', () => {
+  assert.match(linkErrorMessage('email rate limit exceeded'), /час/);
+  assert.match(linkErrorMessage('For security purposes, you can only request this after 42 seconds.'), /42 сек/);
+  assert.match(linkErrorMessage('Signups not allowed for otp'), /только для хозяйки/);
+  assert.match(linkErrorMessage('Failed to fetch'), /интернет/);
 });
