@@ -54,7 +54,6 @@ export async function openStarterPicker() {
           if (it.kind === 'quote') b.appendChild(renderQuoteCard(it.text));
           else {
             const img = new Image();
-            img.loading = 'lazy';
             img.alt = g.name;
             img.src = it.url.replace('w=1080', 'w=400');
             b.appendChild(img);

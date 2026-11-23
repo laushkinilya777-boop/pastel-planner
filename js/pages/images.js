@@ -69,7 +69,6 @@ export function render(root, _p, { user }) {
       else {
         const el = new Image();
         el.alt = '';
-        el.loading = 'lazy';
         el.decoding = 'async';
         imageSrc(img).then((src) => { if (src) el.src = src; });
         el.onerror = () => tile.classList.add('broken');
