@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { parseRoute } from '../js/router.js';
-import { isValidEmail, normalizeCode } from '../js/auth-utils.js';
+import { isValidEmail, passwordProblem, needsPassword } from '../js/auth-utils.js';
 
 test('parseRoute: пусто и неизвестное -> today', () => {
   assert.deepEqual(parseRoute(''), { name: 'today', params: {} });
@@ -26,8 +26,15 @@ test('isValidEmail', () => {
   assert.equal(isValidEmail(''), false);
 });
 
-test('normalizeCode: убирает пробелы и не-цифры, ровно 6 цифр', () => {
-  assert.equal(normalizeCode(' 123 456 '), '123456');
-  assert.equal(normalizeCode('12-34-56'), '123456');
-  assert.equal(normalizeCode('12345'), null);
+test('passwordProblem: минимум 8 символов и совпадение', () => {
+  assert.equal(passwordProblem('kitty123', 'kitty123'), null);
+  assert.equal(passwordProblem('kit', 'kit'), 'Пароль должен быть не короче 8 символов');
+  assert.equal(passwordProblem('kitty123', 'kitty124'), 'Пароли не совпадают');
+  assert.equal(passwordProblem('        ', '        '), 'Пароль не может состоять из одних пробелов');
+});
+
+test('needsPassword: после входа по ссылке без пароля', () => {
+  assert.equal(needsPassword({ user_metadata: {} }), true);
+  assert.equal(needsPassword({ user_metadata: { has_password: true } }), false);
+  assert.equal(needsPassword(null), false);
 });

@@ -1,6 +1,7 @@
 // Точка входа: вход, меню, страницы, синхронизация, тема дня.
 import { client, store } from './supabase.js';
-import { renderAuth } from './auth.js';
+import { renderAuth, renderSetPassword } from './auth.js';
+import { needsPassword } from './auth-utils.js';
 import { parseRoute } from './router.js';
 import { renderNav } from './ui/nav.js';
 import { icon, hydrateIcons } from './ui/icons.js';
@@ -62,8 +63,11 @@ function renderSyncBadge() {
   return badge;
 }
 
+let started = false;
 function startApp() {
   document.body.classList.remove('signed-out');
+  if (started) { show(); return; }
+  started = true;
   const today = todayISO();
   top.innerHTML = '';
   top.append(renderSyncBadge(), createWeatherChip(today));
@@ -87,12 +91,27 @@ function showAuth() {
   renderAuth(main);
 }
 
+// Вошла по ссылке, а пароля ещё нет — сначала предложим его придумать.
+function enter(u) {
+  user = u;
+  if (needsPassword(u) && sessionStorage.getItem('pw-later') !== '1') {
+    document.body.classList.add('signed-out');
+    renderSetPassword(main, () => {
+      try { sessionStorage.setItem('pw-later', '1'); } catch { /* ничего */ }
+      startApp();
+    });
+  } else {
+    startApp();
+  }
+}
+
 hydrateIcons();
 const { data: { session } } = await client.auth.getSession();
-user = session?.user || null;
-if (user) startApp(); else showAuth();
+// после входа по ссылке в адресе остаётся #access_token=… — убираем
+if (/access_token|error_description/.test(location.hash)) history.replaceState(null, '', location.pathname + '#/today');
+if (session?.user) enter(session.user); else showAuth();
 
 client.auth.onAuthStateChange((event, s) => {
-  if (event === 'SIGNED_IN' && !user) { user = s.user; startApp(); }
+  if (event === 'SIGNED_IN' && !user) enter(s.user);
   if (event === 'SIGNED_OUT') { user = null; showAuth(); }
 });
