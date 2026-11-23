@@ -52,12 +52,12 @@ export function renderAuth(root) {
     if (!isValidEmail(email)) { err.textContent = 'Проверь почту: похоже, в ней опечатка'; return; }
     if (!f.pw.value) { err.textContent = 'Введи пароль'; return; }
     btn.disabled = true; btn.textContent = 'Входим…';
+    // событие входа приходит раньше, чем ответ, поэтому отмечаем заранее: паролем входить умеет, не спрашивать
+    try { sessionStorage.setItem('pw-later', '1'); } catch { /* ничего */ }
     const { data, error } = await client.auth.signInWithPassword({ email, password: f.pw.value });
     // вошла паролем — значит, пароль есть (на случай, если аккаунт создан в панели Supabase)
-    if (!error && !data.user?.user_metadata?.has_password) {
-      try { sessionStorage.setItem('pw-later', '1'); } catch { /* ничего */ } // не предлагать придумать пароль
-      client.auth.updateUser({ data: { has_password: true } }).catch(() => {});
-    }
+    if (!error && !data.user?.user_metadata?.has_password) client.auth.updateUser({ data: { has_password: true } }).catch(() => {});
+    if (error) { try { sessionStorage.removeItem('pw-later'); } catch { /* ничего */ } }
     if (error) {
       btn.disabled = false; btn.textContent = 'Войти';
       err.textContent = /invalid login/i.test(error.message)
