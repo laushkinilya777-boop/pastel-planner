@@ -9,6 +9,8 @@ import { todayISO } from './dates.js';
 import { initDailyTheme, createWeatherChip, onWeatherPicked, applyServerDay } from './theme.js';
 import { placeholder } from './pages/placeholder.js';
 import { backfillStarterMoods } from './ui/starter-picker.js';
+import { currentAvailability, isPushOn, enablePush } from './push.js';
+import { openSheet, toast } from './ui/sheet.js';
 
 const PAGES = {
   today: () => import('./pages/today.js').catch(() => placeholder('Сегодня', 'sun', 'Здесь появится план на сегодня — шаг 8')),
@@ -67,13 +69,49 @@ function renderSyncBadge() {
 }
 
 let started = false;
+// Колокольчик в шапке: виден, пока напоминания на этом устройстве не включены.
+function renderBell() {
+  const b = document.createElement('button');
+  b.className = 'weather-chip bell-chip';
+  b.type = 'button';
+  b.hidden = true;
+  b.innerHTML = `${icon('bell', 18)}<span>Напоминания</span>`;
+  b.setAttribute('aria-label', 'Включить напоминания');
+  const avail = currentAvailability();
+  if (avail !== 'unsupported') isPushOn().then((on) => { b.hidden = on; }).catch(() => { b.hidden = false; });
+  b.addEventListener('click', async () => {
+    if (currentAvailability() === 'need-home-screen') {
+      openSheet({
+        title: 'Напоминания на iPhone',
+        build(body) {
+          body.innerHTML = `<ol class="howto">
+            <li>Открой этот сайт в <b>Safari</b></li>
+            <li>Нажми <b>«Поделиться»</b> (квадрат со стрелкой вверх)</li>
+            <li>Выбери <b>«На экран „Домой“»</b> → <b>«Добавить»</b></li>
+            <li>Открой планер <b>со значка</b> на экране и нажми колокольчик ещё раз</li></ol>
+            <p class="hint">Так iPhone разрешает сайтам присылать уведомления (нужна iOS 16.4 или новее)</p>`;
+        },
+      });
+      return;
+    }
+    b.disabled = true;
+    try { await enablePush(); b.hidden = true; toast('Напоминания включены'); } catch (e) { toast(e.message); } finally { b.disabled = false; }
+  });
+  return b;
+}
+
+function registerSW() {
+  if (!('serviceWorker' in navigator) || location.pathname.includes('/dev/')) return;
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+
 function startApp() {
   document.body.classList.remove('signed-out');
   if (started) { show(); return; }
   started = true;
   const today = todayISO();
   top.innerHTML = '';
-  top.append(renderSyncBadge(), createWeatherChip(today));
+  top.append(renderSyncBadge(), renderBell(), createWeatherChip(today));
   onWeatherPicked((date, weather) =>
     store.upsert('settings', { user_id: user.id, day_date: date, day_weather: weather }).catch(() => {}));
   initDailyTheme(today);
@@ -110,6 +148,7 @@ function enter(u) {
 }
 
 hydrateIcons();
+registerSW();
 const { data: { session } } = await client.auth.getSession();
 // после входа по ссылке в адресе остаётся #access_token=… — убираем
 if (/access_token|error_description/.test(location.hash)) history.replaceState(null, '', location.pathname + '#/today');

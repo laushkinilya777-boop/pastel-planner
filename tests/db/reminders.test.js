@@ -8,11 +8,11 @@ async function setup() {
   const t = await insertTask(db, { user_id: A, title: 'Йога', date: '2026-11-23', time: '09:00', remind_minutes: 15 });
   return { db, t };
 }
-const due = async (db, now) => (await db.query(`select task_id, title, time from due_reminders($1)`, [now])).rows;
+const due = async (db, now) => (await db.query(`select task_id, title, time, remind_minutes from due_reminders($1)`, [now])).rows;
 
 test('напоминание за 15 минут: в 08:45 есть', async () => {
   const { db, t } = await setup();
-  assert.deepEqual(await due(db, '2026-11-23 08:45+03'), [{ task_id: t.id, title: 'Йога', time: '09:00:00' }]);
+  assert.deepEqual(await due(db, '2026-11-23 08:45+03'), [{ task_id: t.id, title: 'Йога', time: '09:00:00', remind_minutes: 15 }]);
 });
 
 test('в 08:44 ещё рано', async () => {

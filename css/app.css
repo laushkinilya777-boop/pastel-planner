@@ -201,3 +201,6 @@ main:focus { outline: none; }
 .switch input:checked + span::after { transform: translateX(18px); }
 .switch input:focus-visible + span { outline: 2px solid var(--violet); outline-offset: 2px; }
 .period-head .page-title { font-size: clamp(24px, 7vw, 34px); white-space: nowrap; }
+
+.bell-chip[hidden] { display: none; }
+.howto { margin: 0 0 12px; padding-left: 20px; display: grid; gap: 10px; line-height: 1.4; }
