@@ -12,8 +12,11 @@ export const B = '00000000-0000-0000-0000-00000000000b';
 export async function makeDb() {
   const db = new PGlite();
   await db.exec(`
+    create role anon;
     create role authenticated;
     create role service_role;
+    -- как в Supabase: новые функции в public по умолчанию доступны anon и authenticated
+    alter default privileges in schema public grant execute on functions to anon, authenticated, service_role;
     create schema auth;
     create table auth.users (id uuid primary key);
     create function auth.uid() returns uuid language sql stable as
@@ -38,6 +41,20 @@ export async function asUser(db, uid, fn) {
   await db.exec('begin');
   try {
     await db.exec(`set local role authenticated; select set_config('request.jwt.claim.sub', '${uid}', true);`);
+    const result = await fn(db);
+    await db.exec('commit');
+    return result;
+  } catch (e) {
+    await db.exec('rollback');
+    throw e;
+  }
+}
+
+// Выполняет fn(db) как гость без входа (роль anon).
+export async function asAnon(db, fn) {
+  await db.exec('begin');
+  try {
+    await db.exec('set local role anon');
     const result = await fn(db);
     await db.exec('commit');
     return result;

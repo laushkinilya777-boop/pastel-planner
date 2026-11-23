@@ -52,7 +52,8 @@ begin
   end loop;
   return n;
 end $$;
-grant execute on function public.materialize(uuid, date) to authenticated;
+revoke execute on function public.materialize(uuid, date) from public, anon;
+grant execute on function public.materialize(uuid, date) to authenticated, service_role;
 
 -- «Эта и все следующие»: старое правило заканчивается накануне, с этого дня действует новое.
 create function public.split_recurrence(p_task_id uuid, p_changes jsonb, p_until date default current_date + 60)
@@ -89,6 +90,7 @@ begin
   perform materialize(r.user_id, p_until);
   return new_id;
 end $$;
+revoke execute on function public.split_recurrence(uuid, jsonb, date) from public, anon;
 grant execute on function public.split_recurrence(uuid, jsonb, date) to authenticated;
 
 -- «Удалить эту и все следующие».
@@ -102,4 +104,5 @@ begin
   delete from tasks
     where recurrence_id = t.recurrence_id and occurrence_date >= t.occurrence_date and not done and not is_exception;
 end $$;
+revoke execute on function public.end_recurrence_from(uuid) from public, anon;
 grant execute on function public.end_recurrence_from(uuid) to authenticated;
