@@ -10,6 +10,9 @@ const WD = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
 const MONTHS_GEN = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'];
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 let shownWeek = null; // запоминаем неделю, пока сайт открыт
+const VIEW_KEY = 'planner-week-view';
+const loadView = () => { try { return localStorage.getItem(VIEW_KEY) === 'list' ? 'list' : 'grid'; } catch { return 'grid'; } };
+const saveView = (v) => { try { localStorage.setItem(VIEW_KEY, v); } catch { /* ничего */ } };
 
 function rangeTitle(start) {
   const a = parseISODate(start);
@@ -32,7 +35,23 @@ export function render(root) {
       <div class="goals"></div>
       <button class="btn ghost" type="button" data-act="goal">${icon('plus', 18)}Цель недели</button>
     </section>
+    <div class="view-switch">
+      <div class="segmented" role="tablist" aria-label="Вид дней">
+        <button role="tab" data-view="grid">Плитка</button>
+        <button role="tab" data-view="list">Лента</button>
+      </div>
+    </div>
     <div class="week-days"></div>`;
+
+  let view = loadView();
+  const paintView = () => {
+    root.querySelectorAll('[data-view]').forEach((b) => b.setAttribute('aria-selected', b.dataset.view === view));
+    root.querySelector('.week-days').classList.toggle('as-list', view === 'list');
+  };
+  root.querySelectorAll('[data-view]').forEach((b) => b.addEventListener('click', () => {
+    view = b.dataset.view; saveView(view); paintView(); refresh();
+  }));
+  paintView();
 
   root.querySelectorAll('[data-nav]').forEach((b) => b.addEventListener('click', () => {
     shownWeek = addDays(shownWeek, Number(b.dataset.nav)); refresh();
@@ -50,13 +69,27 @@ export function render(root) {
     root.querySelector('.week-days').innerHTML = days.map((d, i) => {
       const list = sortTasks(tasks.filter((t) => t.date === d));
       const p = dayProgress(list);
+      const free = i >= 5 ? 'выходной — отдыхай' : 'свободно';
+      const cls = `day-card${d === today ? ' today' : ''}${d < today ? ' past' : ''}${i >= 5 ? ' weekend' : ''}${p.total && p.done === p.total ? ' all-done' : ''}`;
+      if (view === 'list') {
+        // «Лента»: слева бейдж с датой, который «наливается» по мере выполнения, справа задачи-пилюли
+        return `<a class="${cls}" href="#/day/${d}">
+          <div class="dl-badge" style="--p:${p.percent}%">
+            <span class="dc-wd">${WD[i]}</span><span class="dc-num">${parseISODate(d).getDate()}</span>
+          </div>
+          <div class="dl-body">
+            ${list.length ? `<ul class="pills">${list.slice(0, 6).map((t) => `<li class="${t.done ? 'done' : ''}">${t.time ? `<i>${t.time.slice(0, 5)}</i>` : ''}<span>${esc(t.title)}</span></li>`).join('')}${list.length > 6 ? `<li class="more">+${list.length - 6}</li>` : ''}</ul>` : `<p class="dc-empty">${free}</p>`}
+          </div>
+          ${p.total ? `<span class="dc-sum">${p.done}/${p.total}</span>` : ''}
+        </a>`;
+      }
       const shown = list.slice(0, 4);
-      return `<a class="day-card${d === today ? ' today' : ''}${d < today ? ' past' : ''}" href="#/day/${d}">
+      return `<a class="${cls}" href="#/day/${d}">
         <div class="day-card-head">
           <span class="dc-wd">${WD[i]}</span><span class="dc-num">${parseISODate(d).getDate()}</span>
           ${p.total ? `<span class="dc-sum">${p.done}/${p.total}</span>` : ''}
         </div>
-        ${shown.length ? `<ul>${shown.map((t) => `<li class="${t.done ? 'done' : ''}">${t.time ? `<i>${t.time.slice(0, 5)}</i>` : ''}${esc(t.title)}</li>`).join('')}</ul>` : '<p class="dc-empty">свободно</p>'}
+        ${shown.length ? `<ul>${shown.map((t) => `<li class="${t.done ? 'done' : ''}">${t.time ? `<i>${t.time.slice(0, 5)}</i>` : ''}${esc(t.title)}</li>`).join('')}</ul>` : `<p class="dc-empty">${free}</p>`}
         ${list.length > 4 ? `<p class="dc-more">ещё ${list.length - 4}</p>` : ''}
       </a>`;
     }).join('');

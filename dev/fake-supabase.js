@@ -14,7 +14,11 @@ const db = {
     { id: 't3', title: 'Дописать отчёт', date: today, time: '15:00:00', done: false, carry_count: 2, remind_minutes: null, created_at: now(), note: 'раздел 3 и выводы' },
     { id: 't4', title: 'Купить корм котику', date: today, time: null, done: false, carry_count: 0, created_at: now() },
     { id: 't5', title: 'Витамины', date: today, time: '08:00:00', done: false, carry_count: 0, recurrence_id: 'r1', occurrence_date: today, remind_minutes: 15, created_at: now() },
-  ],
+  ].concat([
+    { id: 't6', title: 'Маникюр', date: iso(new Date(_d.getTime() + 5 * 86400000)), time: '12:00:00', done: false, carry_count: 0, created_at: now() },
+    { id: 't7', title: 'Кино с подругой', date: iso(new Date(_d.getTime() + 5 * 86400000)), time: '19:00:00', done: false, carry_count: 0, created_at: now() },
+    { id: 't8', title: 'Отчёт начальнику', date: iso(new Date(Date.now() + 86400000)), time: '10:00:00', done: false, carry_count: 0, created_at: now() },
+  ]),
   recurrences: [{ id: 'r1', title: 'Витамины', time: '08:00:00', freq: 'daily', weekdays: null, start_date: yesterday, end_date: null }],
   task_history: [
     { id: 1, task_id: 't3', field: 'date', old_value: yesterday, new_value: today, changed_at: now() },

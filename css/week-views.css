@@ -1,0 +1,62 @@
+/* ── выходные горят розовым ── */
+:root { --wk-a: #ffd3e4; --wk-b: #ffe8f1; --wk-ink: #d2557f; }
+:root[data-theme="peach"] { --wk-a: #ffcfd8; --wk-b: #ffe6e0; --wk-ink: #d2506b; }
+:root[data-theme="mint"] { --wk-a: #ffd6e8; --wk-b: #fbe9f4; --wk-ink: #c95684; }
+
+.day-card.weekend {
+  background: linear-gradient(150deg, var(--wk-a), var(--wk-b) 70%, rgba(255, 255, 255, .75));
+  border-color: rgba(255, 255, 255, .95);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, .6), 0 12px 30px -12px rgba(236, 110, 160, .6);
+}
+.day-card.weekend .dc-wd, .day-card.weekend .dc-num { color: var(--wk-ink); }
+.day-card.weekend .dc-empty { color: color-mix(in srgb, var(--wk-ink) 65%, white); }
+.day-card.weekend .dc-sum { background: rgba(255, 255, 255, .75); color: var(--wk-ink); }
+.day-card.weekend.today { box-shadow: 0 0 0 2px var(--wk-ink), 0 12px 30px -12px rgba(236, 110, 160, .6); }
+
+.cal-wd.weekend { color: var(--wk-ink); }
+.cal-day.weekend:not(.red):not(.other) { background: color-mix(in srgb, var(--wk-a) 60%, transparent); }
+.cal-day.weekend:not(.red) .cd-num { color: var(--wk-ink); font-weight: 600; }
+
+/* ── переключатель «Плитка / Лента» ── */
+.view-switch { display: flex; justify-content: flex-end; margin: 4px 0 10px; }
+
+/* ── вид «Лента» ── */
+.week-days.as-list { grid-template-columns: 1fr; gap: 8px; }
+.as-list .day-card {
+  display: grid; grid-template-columns: 64px minmax(0, 1fr) auto; align-items: center; gap: 14px;
+  min-height: 80px; padding: 8px 14px 8px 8px; border-radius: 26px;
+}
+.as-list .day-card.past { opacity: .7; }
+.dl-badge {
+  --p: 0%;
+  position: relative; width: 64px; height: 64px; border-radius: 20px; overflow: hidden;
+  display: grid; place-content: center; text-align: center;
+  background: rgba(255, 255, 255, .85); box-shadow: inset 0 0 0 1px var(--glass-edge);
+}
+/* мини-прогресс: бейдж снизу «наливается» цветом по мере выполнения задач */
+.dl-badge::before {
+  content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: var(--p);
+  background: linear-gradient(0deg, color-mix(in srgb, var(--g2) 40%, transparent), color-mix(in srgb, var(--g1) 18%, transparent));
+  transition: height .8s cubic-bezier(.34, 1.2, .5, 1);
+}
+.dl-badge > * { position: relative; }
+.dl-badge .dc-wd { font-size: 11px; line-height: 1; }
+.dl-badge .dc-num { font-size: 26px; line-height: 1.1; }
+.as-list .day-card.today .dl-badge { background: var(--accent); box-shadow: 0 8px 20px -8px rgba(var(--tint), .7); }
+.as-list .day-card.today .dl-badge::before { background: rgba(255, 255, 255, .25); }
+.as-list .day-card.today .dl-badge * { color: #fff; }
+.as-list .day-card.weekend:not(.today) .dl-badge { background: rgba(255, 255, 255, .7); }
+.dl-body { min-width: 0; }
+.as-list .dc-empty { margin: 0; }
+.as-list .dc-sum { margin: 0; align-self: center; }
+
+.day-card ul.pills { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.pills li {
+  display: inline-flex; align-items: center; gap: 6px; max-width: 100%; min-height: 30px; padding: 0 12px;
+  border-radius: 999px; background: rgba(255, 255, 255, .85); box-shadow: inset 0 0 0 1px var(--line); font-size: 14px;
+}
+.pills li span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pills li i { font-style: normal; color: var(--ink-3); font-variant-numeric: tabular-nums; font-size: 12px; }
+.pills li.done { color: var(--ink-3); text-decoration: line-through; background: rgba(255, 255, 255, .45); }
+.pills li.more { color: var(--ink-2); font-weight: 600; }
+.day-card.all-done .dc-sum { background: var(--accent); color: #fff; }

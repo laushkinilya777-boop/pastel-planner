@@ -22,7 +22,7 @@ export function render(root) {
     </div>
     <section class="panel cal-panel">
       <div class="cal" role="grid" aria-label="Календарь месяца">
-        ${['пн', 'вт', 'ср', 'чт', 'пт', 'сб', 'вс'].map((d) => `<div class="cal-wd" role="columnheader">${d}</div>`).join('')}
+        ${['пн', 'вт', 'ср', 'чт', 'пт', 'сб', 'вс'].map((d, i) => `<div class="cal-wd${i >= 5 ? ' weekend' : ''}" role="columnheader">${d}</div>`).join('')}
       </div>
       <div class="cal-legend">
         <span><i class="lg red"></i>красная дата</span>
@@ -69,7 +69,8 @@ export function render(root) {
       const other = !d.startsWith(monthStart().slice(0, 8));
       const a = document.createElement('a');
       a.href = `#/day/${d}`;
-      a.className = `cal-day${other ? ' other' : ''}${d === today ? ' today' : ''}${red ? ' red' : ''}`;
+      const wkend = parseISODate(d).getDay() % 6 === 0; // суббота или воскресенье
+      a.className = `cal-day${other ? ' other' : ''}${d === today ? ' today' : ''}${red ? ' red' : ''}${wkend ? ' weekend' : ''}`;
       a.setAttribute('role', 'gridcell');
       const label = [parseISODate(d).getDate() + ' ' + MONTHS_GEN[parseISODate(d).getMonth()], ...sp.map((x) => x.title), dayTasks.length ? `задач: ${dayTasks.length}` : ''].filter(Boolean).join(', ');
       a.setAttribute('aria-label', label);
