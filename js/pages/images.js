@@ -3,6 +3,7 @@ import { store } from '../supabase.js';
 import { openSheet, choose, toast } from '../ui/sheet.js';
 import { uploadPhoto, removePhoto, imageSrc } from '../ui/image-tools.js';
 import { renderQuoteCard } from '../ui/image-of-day.js';
+import { openStarterPicker } from '../ui/starter-picker.js';
 import { icon } from '../ui/icons.js';
 import { CATEGORIES, isImageUrl } from '../images.js';
 
@@ -18,6 +19,7 @@ export function render(root, _p, { user }) {
       <label class="btn">${icon('gallery', 18)}Фото<input type="file" accept="image/*" multiple hidden></label>
       <button class="btn ghost" type="button" data-act="link">${icon('heart', 18)}Ссылка</button>
       <button class="btn ghost" type="button" data-act="quote">${icon('plus', 18)}Фраза</button>
+      <button class="btn ghost" type="button" data-act="starter">${icon('shuffle', 18)}Стартовый набор</button>
     </div>
     <div class="filters" role="tablist" aria-label="Категории">
       ${[{ id: 'all', name: 'Все' }, ...CATEGORIES].map((c) => `<button role="tab" data-f="${c.id}">${c.name}</button>`).join('')}
@@ -45,6 +47,7 @@ export function render(root, _p, { user }) {
   });
   root.querySelector('[data-act=link]').addEventListener('click', () => openLinkSheet());
   root.querySelector('[data-act=quote]').addEventListener('click', () => openQuoteSheet());
+  root.querySelector('[data-act=starter]').addEventListener('click', () => openStarterPicker());
 
   async function refresh() {
     const all = (await store.list('images')).sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)));
