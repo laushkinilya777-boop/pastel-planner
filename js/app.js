@@ -50,7 +50,9 @@ async function ensureSettings() {
 
 async function dailyWork() {
   try { await store.rpc('run_daily', {}); } catch { /* офлайн — догоним позже */ }
-  store.flush().catch(() => {});
+  await store.flush().catch(() => {});
+  // подтянуть правки, сделанные на другом устройстве
+  for (const t of ['tasks', 'recurrences', 'goals', 'special_dates', 'settings']) store.refresh(t).catch(() => {});
 }
 
 function renderSyncBadge() {

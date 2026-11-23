@@ -158,3 +158,30 @@ test('событие change приходит после upsert', async () => {
   await store.upsert('goals', { title: 'Книги' });
   assert.deepEqual(seen, ['goals']);
 });
+
+test('list не дёргает сервер чаще раза в 15 секунд', async () => {
+  const client = fakeClient({ tasks: [{ id: 'x1', title: 'A', date: '2026-11-23' }] });
+  let selects = 0;
+  const from = client.from;
+  client.from = (t) => { const api = from(t); const sel = api.select; api.select = async () => { selects += 1; return sel(); }; return api; };
+  const store = mk(client);
+  await store.list('tasks');
+  await new Promise((r) => setTimeout(r, 20));
+  await store.list('tasks');
+  await store.list('tasks');
+  await new Promise((r) => setTimeout(r, 20));
+  assert.equal(selects, 1);
+});
+
+test('refresh без изменений не шлёт change (нет бесконечной перерисовки)', async () => {
+  const client = fakeClient({ tasks: [{ id: 'x1', title: 'A', date: '2026-11-23' }] });
+  const store = mk(client);
+  await store.refresh('tasks');
+  let changes = 0;
+  store.on('change', () => { changes += 1; });
+  await store.refresh('tasks');
+  assert.equal(changes, 0);
+  client.tables.tasks[0].title = 'B';
+  await store.refresh('tasks');
+  assert.equal(changes, 1);
+});

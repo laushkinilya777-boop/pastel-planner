@@ -34,15 +34,22 @@ export function createStore({ client, indexedDB = globalThis.indexedDB, dbName =
     return req(db.transaction('outbox').objectStore('outbox').getAll());
   }
 
+  // Фоновая подгрузка с сервера — не чаще раза в REFRESH_MS на таблицу.
+  const REFRESH_MS = 15000;
+  const lastPull = {};
   async function list(table, filter) {
     const db = await dbp;
     const rows = await req(db.transaction(table).objectStore(table).getAll());
-    refresh(table).catch(() => {});
+    if (!lastPull[table] || Date.now() - lastPull[table] > REFRESH_MS) {
+      lastPull[table] = Date.now();
+      refresh(table).catch(() => {});
+    }
     return filter ? rows.filter(filter) : rows;
   }
 
   async function refresh(table) {
     let res;
+    lastPull[table] = Date.now();
     try { res = await client.from(table).select('*'); } catch { return; }
     if (res.error) return;
     const pending = (await outbox()).filter((op) => op.table === table);
@@ -52,11 +59,13 @@ export function createStore({ client, indexedDB = globalThis.indexedDB, dbName =
     const tx = db.transaction(table, 'readwrite');
     const st = tx.objectStore(table);
     // локальные версии строк с неотправленными правками сохраняем
-    const keep = [];
-    for (const k of pendingKeys) { const r = await req(st.get(k)); if (r) keep.push(r); }
+    const before = await req(st.getAll());
+    const keep = before.filter((r) => pendingKeys.has(r[key]));
+    const next = [...res.data.filter((row) => !pendingKeys.has(row[key])), ...keep];
+    const sig = (rows) => JSON.stringify([...rows].sort((a, b) => String(a[key]).localeCompare(String(b[key]))));
+    if (sig(before) === sig(next)) { await done(tx); return; } // ничего не изменилось — не перерисовываем
     st.clear();
-    for (const row of res.data) if (!pendingKeys.has(row[key])) st.put(row);
-    for (const row of keep) st.put(row);
+    for (const row of next) st.put(row);
     await done(tx);
     emit('change', table);
   }
