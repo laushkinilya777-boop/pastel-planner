@@ -1,0 +1,160 @@
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { IDBFactory } from 'fake-indexeddb';
+import { createStore, OfflineError } from '../js/store.js';
+
+// Поддельный клиент Supabase: таблицы в памяти, журнал успешных записей, «выдернутый интернет».
+function fakeClient(initial = {}) {
+  const tables = structuredClone(initial);
+  const log = [];
+  const c = {
+    offline: false,
+    failNext: 0, // сколько следующих запросов упадут как сетевые
+    serverReject: null, // id строки, которую сервер отвергнет (как RLS)
+    log,
+    tables,
+    net() {
+      if (c.offline) throw new TypeError('Failed to fetch');
+      if (c.failNext > 0) { c.failNext -= 1; throw new TypeError('Failed to fetch'); }
+    },
+    from(table) {
+      tables[table] ??= [];
+      return {
+        select: async () => { c.net(); return { data: structuredClone(tables[table]), error: null }; },
+        upsert: async (row) => {
+          c.net();
+          if (row.id === c.serverReject) return { data: null, error: { code: '42501', message: 'row-level security' } };
+          const i = tables[table].findIndex((r) => r.id === row.id);
+          if (i >= 0) tables[table][i] = { ...row }; else tables[table].push({ ...row });
+          log.push(`upsert ${table} ${row.title ?? row.id}`);
+          return { data: null, error: null };
+        },
+        delete: () => ({
+          eq: async (_col, id) => {
+            c.net();
+            tables[table] = tables[table].filter((r) => r.id !== id);
+            log.push(`delete ${table} ${id}`);
+            return { data: null, error: null };
+          },
+        }),
+      };
+    },
+    rpc: async (name) => { c.net(); return { data: `ok:${name}`, error: null }; },
+  };
+  return c;
+}
+
+const mk = (client) => createStore({ client, indexedDB: new IDBFactory(), dbName: 't', autoFlush: false });
+
+test('upsert офлайн попадает в кэш и очередь', async () => {
+  const client = fakeClient();
+  client.offline = true;
+  const store = mk(client);
+  const row = await store.upsert('tasks', { title: 'Йога', date: '2026-11-23' });
+  assert.ok(row.id);
+  assert.ok(row.updated_at);
+  assert.equal(await store.pendingCount(), 1);
+  const rows = await store.list('tasks');
+  assert.deepEqual(rows.map((r) => r.title), ['Йога']);
+});
+
+test('flush после восстановления сети отправляет в порядке A, B, C', async () => {
+  const client = fakeClient();
+  client.offline = true;
+  const store = mk(client);
+  for (const t of ['A', 'B', 'C']) await store.upsert('tasks', { title: t, date: '2026-11-23' });
+  await store.flush();
+  assert.deepEqual(client.log, []);
+  client.offline = false;
+  await store.flush();
+  assert.deepEqual(client.log, ['upsert tasks A', 'upsert tasks B', 'upsert tasks C']);
+  assert.equal(await store.pendingCount(), 0);
+});
+
+test('частичная ошибка + повторный flush = ровно один upsert на строку, порядок сохранён', async () => {
+  const client = fakeClient();
+  client.offline = true;
+  const store = mk(client);
+  for (const t of ['A', 'B', 'C']) await store.upsert('tasks', { title: t, date: '2026-11-23' });
+  client.offline = false;
+  client.failNext = 0;
+  // A уйдёт, на B сеть моргнёт
+  const origUpsert = client.from;
+  let calls = 0;
+  client.from = (table) => {
+    const api = origUpsert(table);
+    const up = api.upsert;
+    api.upsert = async (row) => { calls += 1; if (calls === 2) throw new TypeError('Failed to fetch'); return up(row); };
+    return api;
+  };
+  await store.flush();
+  assert.deepEqual(client.log, ['upsert tasks A']);
+  assert.equal(await store.pendingCount(), 2);
+  await store.flush();
+  await store.flush();
+  assert.deepEqual(client.log, ['upsert tasks A', 'upsert tasks B', 'upsert tasks C']);
+});
+
+test('refresh не затирает строку с неотправленной правкой', async () => {
+  const id = '11111111-1111-1111-1111-111111111111';
+  const client = fakeClient({ tasks: [{ id, title: 'Старое', date: '2026-11-23' }] });
+  const store = mk(client);
+  await store.refresh('tasks');
+  client.offline = true;
+  await store.upsert('tasks', { id, title: 'Новое', date: '2026-11-23' });
+  client.offline = false;
+  client.serverReject = id; // не дадим отправить, чтобы правка оставалась в очереди
+  client.failNext = 0;
+  await store.refresh('tasks');
+  const rows = await store.list('tasks');
+  assert.equal(rows.find((r) => r.id === id).title, 'Новое');
+});
+
+test('refresh подтягивает строки с сервера', async () => {
+  const client = fakeClient({ tasks: [{ id: 'x1', title: 'С компьютера', date: '2026-11-23' }] });
+  const store = mk(client);
+  await store.refresh('tasks');
+  assert.deepEqual((await store.list('tasks')).map((r) => r.title), ['С компьютера']);
+});
+
+test('remove офлайн убирает из кэша и потом удаляет на сервере', async () => {
+  const client = fakeClient({ tasks: [{ id: 'x1', title: 'Лишняя', date: '2026-11-23' }] });
+  const store = mk(client);
+  await store.refresh('tasks');
+  client.offline = true;
+  await store.remove('tasks', 'x1');
+  assert.deepEqual(await store.list('tasks'), []);
+  client.offline = false;
+  await store.flush();
+  assert.deepEqual(client.log, ['delete tasks x1']);
+});
+
+test('сервер отверг изменение: оно убирается из очереди, событие error', async () => {
+  const client = fakeClient();
+  const store = mk(client);
+  client.serverReject = 'bad';
+  const errors = [];
+  store.on('error', (e) => errors.push(e.message));
+  await store.upsert('tasks', { id: 'bad', title: 'x', date: '2026-11-23' });
+  await store.flush();
+  assert.equal(await store.pendingCount(), 0);
+  assert.deepEqual(errors, ['row-level security']);
+});
+
+test('rpc офлайн бросает OfflineError', async () => {
+  const client = fakeClient();
+  client.offline = true;
+  const store = mk(client);
+  await assert.rejects(store.rpc('run_daily', {}), OfflineError);
+  client.offline = false;
+  assert.equal(await store.rpc('run_daily', {}), 'ok:run_daily');
+});
+
+test('событие change приходит после upsert', async () => {
+  const client = fakeClient();
+  const store = mk(client);
+  const seen = [];
+  store.on('change', (t) => seen.push(t));
+  await store.upsert('goals', { title: 'Книги' });
+  assert.deepEqual(seen, ['goals']);
+});
