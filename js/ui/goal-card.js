@@ -49,7 +49,7 @@ export function createGoalCard(goal, tasks) {
     const np = goalProgress(goal, tasks);
     card.querySelector('.goal-count').textContent = `${np.value} / ${np.target}`;
     setLiquid(liquid, np.percent);
-    await store.upsert('goals', goal);
+    await store.patch('goals', goal.id, { manual_adjust: goal.manual_adjust });
   }));
   card.querySelector('.goal-open').addEventListener('click', () => openGoalEditor({ goal }));
   card._update = (g, ts) => {
@@ -89,7 +89,8 @@ export function openGoalEditor({ goal = null, period, periodStart }) {
         const err = body.querySelector('.auth-error');
         if (!title) { err.textContent = 'Напиши цель'; return; }
         if (!(target >= 1)) { err.textContent = 'Число должно быть от 1'; return; }
-        await store.upsert('goals', { ...g, title, target, created_at: g.created_at || new Date().toISOString() });
+        if (goal) await store.patch('goals', g.id, { title, target });
+        else await store.upsert('goals', { ...g, title, target, created_at: new Date().toISOString() });
         close();
       });
       body.querySelector('[data-act=delete]')?.addEventListener('click', async () => {

@@ -1,13 +1,15 @@
 // Нижний лист (на компьютере — окно по центру) и выбор из вариантов.
 import { icon } from './icons.js';
 
+const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
 export function openSheet({ title, build, wide = false }) {
   const back = document.createElement('div');
   back.className = 'sheet-backdrop';
   back.innerHTML = `
-    <div class="sheet ${wide ? 'wide' : ''}" role="dialog" aria-modal="true" aria-label="${title}">
+    <div class="sheet ${wide ? 'wide' : ''}" role="dialog" aria-modal="true" aria-label="${esc(title)}">
       <div class="sheet-head">
-        <h2>${title}</h2>
+        <h2>${esc(title)}</h2>
         <button class="icon-btn sheet-x" type="button" aria-label="Закрыть">${icon('close', 20)}</button>
       </div>
       <div class="sheet-body"></div>
@@ -39,7 +41,7 @@ export function choose({ title, text = '', options }) {
     const { el } = openSheet({
       title,
       build(body, close) {
-        body.innerHTML = `${text ? `<p class="sheet-sub">${text}</p>` : ''}<div class="choice-list"></div>`;
+        body.innerHTML = `${text ? `<p class="sheet-sub">${esc(text)}</p>` : ''}<div class="choice-list"></div>`;
         const list = body.querySelector('.choice-list');
         for (const o of options) {
           const b = document.createElement('button');

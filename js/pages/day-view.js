@@ -87,7 +87,7 @@ export function renderDay(root, { date, mode, user }) {
       list.appendChild(renderTaskRow(t, {
         today,
         onToggle: async (task) => {
-          await store.upsert('tasks', { ...task, done: !task.done, done_at: task.done ? null : new Date().toISOString() });
+          await store.patch('tasks', task.id, { done: !task.done, done_at: task.done ? null : new Date().toISOString() });
           if (!task.done) celebrate({ done: p.done + 1, total: p.total });
         },
         onOpen: (task) => openTaskEditor({ task, date: current, user }),

@@ -54,6 +54,9 @@ function query(table) {
       if (i >= 0) db[table][i] = { ...db[table][i], ...row }; else db[table].push({ ...row });
       return Promise.resolve({ data: null, error: null });
     },
+    update(changes) {
+      return { eq: (c, v) => { db[table].filter((r) => r[c] === v).forEach((r) => Object.assign(r, changes)); return Promise.resolve({ error: null, status: 204 }); } };
+    },
     insert(row) { db[table].push({ id: crypto.randomUUID(), ...row }); return Promise.resolve({ data: null, error: null }); },
     delete() { return { eq: (c, v) => { db[table] = db[table].filter((r) => r[c] !== v); return Promise.resolve({ error: null }); } }; },
   };

@@ -1,5 +1,5 @@
 // Service worker: сайт открывается без интернета и принимает push-напоминания.
-const CACHE = 'planner-v1';
+const CACHE = 'planner-v2';
 const SHELL = [
   './', './index.html', './manifest.webmanifest',
   './css/theme.css', './css/layout.css', './css/app.css', './css/week-views.css', './css/images.css',
@@ -35,6 +35,19 @@ self.addEventListener('fetch', (e) => {
       })
       .catch(() => caches.match(e.request, { ignoreSearch: own }).then((r) => r || (e.request.mode === 'navigate' ? caches.match('./index.html') : Response.error()))),
   );
+});
+
+// Страница присылает список уже загруженных файлов — сохраняем, чтобы следующий запуск работал без сети.
+self.addEventListener('message', (e) => {
+  if (e.data?.type !== 'cache' || !Array.isArray(e.data.urls)) return;
+  const allowed = e.data.urls.filter((u) => {
+    try {
+      const url = new URL(u);
+      return (url.origin === self.location.origin && !url.pathname.includes('/dev/'))
+        || ['cdn.jsdelivr.net', 'fonts.googleapis.com', 'fonts.gstatic.com'].includes(url.hostname);
+    } catch { return false; }
+  });
+  e.waitUntil(caches.open(CACHE).then((c) => Promise.all(allowed.map((u) => c.add(u).catch(() => {})))));
 });
 
 self.addEventListener('push', (e) => {

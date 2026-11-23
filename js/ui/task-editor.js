@@ -133,7 +133,8 @@ async function saveTask({ before, next, rec, form, user }) {
 
   // 1) обычная задача без повтора
   if (!before.recurrence_id && !rule) {
-    await store.upsert('tasks', strip({ ...next, created_at: next.created_at || new Date().toISOString() }));
+    if (before.id) await store.patch('tasks', before.id, diff(before, next));
+    else await store.upsert('tasks', strip({ ...next, created_at: new Date().toISOString() }));
     return true;
   }
 
@@ -179,7 +180,7 @@ async function saveTask({ before, next, rec, form, user }) {
     if (!scope) return false;
   }
   if (scope === 'one') {
-    await store.upsert('tasks', strip({ ...next, is_exception: true }));
+    await store.patch('tasks', before.id, { ...diff(before, next), is_exception: true });
     return true;
   }
   await online(async () => {
@@ -211,6 +212,17 @@ async function removeTask(t) {
   await store.refresh('recurrences');
   await store.refresh('tasks');
   return true;
+}
+
+// Только поля, которые хозяйка поменяла в редакторе (остальное на сервере не трогаем).
+function diff(before, next) {
+  const a = strip(before);
+  const b = strip(next);
+  const out = {};
+  for (const k of ['title', 'date', 'time', 'note', 'remind_minutes', 'reminded_at', 'goal_id']) {
+    if (JSON.stringify(a[k] ?? null) !== JSON.stringify(b[k] ?? null)) out[k] = b[k] ?? null;
+  }
+  return out;
 }
 
 // В базу уходят только колонки таблицы tasks.

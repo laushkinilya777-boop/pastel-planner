@@ -14,7 +14,7 @@ export async function backfillStarterMoods() {
   const byId = new Map(STARTER.filter((s) => s.mood).map((s) => [starterId(s.key), s.mood]));
   const images = await store.list('images');
   for (const img of images) {
-    if (!img.mood && byId.has(img.id)) await store.upsert('images', { ...img, mood: byId.get(img.id) });
+    if (!img.mood && byId.has(img.id)) await store.patch('images', img.id, { mood: byId.get(img.id) });
   }
   try { localStorage.setItem('starter-moods-1', '1'); } catch { /* ничего */ }
 }

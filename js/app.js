@@ -12,12 +12,17 @@ import { backfillStarterMoods } from './ui/starter-picker.js';
 import { currentAvailability, isPushOn, enablePush } from './push.js';
 import { openSheet, toast } from './ui/sheet.js';
 
+// Если раздел не загрузился (нет связи и он ещё не сохранён на устройстве) — понятное сообщение.
+const offline = (title, ico) => (e) => {
+  console.error(e);
+  return placeholder(title, ico, 'Нет связи, а этот раздел ещё не сохранён на устройстве. Открой его, когда появится интернет');
+};
 const PAGES = {
-  today: () => import('./pages/today.js').catch(() => placeholder('Сегодня', 'sun', 'Здесь появится план на сегодня — шаг 8')),
-  day: () => import('./pages/day.js').catch(() => placeholder('День', 'sun', 'Здесь появится план выбранного дня — шаг 8')),
-  week: () => import('./pages/week.js').catch(() => placeholder('Неделя', 'week', 'Здесь появятся цели и задачи недели — шаг 9')),
-  month: () => import('./pages/month.js').catch(() => placeholder('Месяц', 'month', 'Здесь появится календарь месяца — шаг 9')),
-  images: () => import('./pages/images.js').catch(() => placeholder('Картинки', 'gallery', 'Здесь появится твоя подборка картинок — шаг 10')),
+  today: () => import('./pages/today.js').catch(offline('Сегодня', 'sun')),
+  day: () => import('./pages/day.js').catch(offline('День', 'sun')),
+  week: () => import('./pages/week.js').catch(offline('Неделя', 'week')),
+  month: () => import('./pages/month.js').catch(offline('Месяц', 'month')),
+  images: () => import('./pages/images.js').catch(offline('Картинки', 'gallery')),
 };
 
 const nav = document.getElementById('nav');
@@ -26,7 +31,9 @@ const top = document.getElementById('top-bar');
 let cleanup = null;
 let user = null;
 
+let shownDay = null; // какой день был «сегодня» при последней отрисовке
 async function show() {
+  shownDay = todayISO();
   const { name, params } = parseRoute(location.hash);
   renderNav(nav, name);
   cleanup?.();
@@ -103,6 +110,17 @@ function renderBell() {
 function registerSW() {
   if (!('serviceWorker' in navigator) || location.pathname.includes('/dev/')) return;
   navigator.serviceWorker.register('sw.js').catch(() => {});
+  cacheLoaded();
+}
+
+// Всё, что страница уже загрузила (свои модули и библиотеки), просим сохранить для запуска без интернета.
+function cacheLoaded() {
+  if (!('serviceWorker' in navigator) || location.pathname.includes('/dev/')) return;
+  navigator.serviceWorker.ready.then((reg) => {
+    const urls = performance.getEntriesByType('resource').map((e) => e.name)
+      .filter((u) => u.startsWith(location.origin) || u.startsWith('https://cdn.jsdelivr.net/') || u.startsWith('https://fonts.'));
+    reg.active?.postMessage({ type: 'cache', urls: [location.href.split('#')[0], ...urls] });
+  }).catch(() => {});
 }
 
 function startApp() {
@@ -113,7 +131,7 @@ function startApp() {
   top.innerHTML = '';
   top.append(renderSyncBadge(), renderBell(), createWeatherChip(today));
   onWeatherPicked((date, weather) =>
-    store.upsert('settings', { user_id: user.id, day_date: date, day_weather: weather }).catch(() => {}));
+    store.patch('settings', user.id, { day_date: date, day_weather: weather }).catch(() => {}));
   initDailyTheme(today);
   ensureSettings().catch(() => {});
   setTimeout(() => backfillStarterMoods().catch(() => {}), 3000);
@@ -121,7 +139,13 @@ function startApp() {
     if (table === 'settings') store.list('settings').then((rs) => applyServerDay(rs.find((r) => r.user_id === user.id), todayISO()));
   });
   dailyWork();
-  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') dailyWork(); });
+  // после полуночи (iPhone держит приложение в памяти) — перерисовать, чтобы «Сегодня» стало новым днём
+  const dayCheck = () => { if (shownDay && shownDay !== todayISO()) show(); };
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { dayCheck(); dailyWork(); } });
+  setInterval(dayCheck, 60000);
+  // заранее подгрузить все разделы, чтобы они открывались и без интернета
+  setTimeout(() => Promise.allSettled(Object.values(PAGES).map((f) => f())).then(cacheLoaded), 5000);
+  store.on('error', (e) => toast(`Не удалось сохранить изменение: ${e?.message || 'ошибка сервера'}`));
   window.addEventListener('hashchange', show);
   show();
 }

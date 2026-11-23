@@ -14,6 +14,15 @@ const done = (tx) => new Promise((resolve, reject) => { tx.oncomplete = resolve;
 // Сетевая ошибка (нет связи) или ответ сервера с отказом?
 const isNetworkError = (e) => e instanceof TypeError || /fetch|network|load failed/i.test(e?.message || '');
 
+// Отказ навсегда — только явная ошибка данных (400/404/409/422 или коды 22xxx/23xxx/PGRST1xx при не-5xx).
+// Всё остальное (5xx, 401/403 при протухшем входе, 408, 429, нет статуса) — временно: правку оставляем в очереди.
+export function isPermanentRejection(error, status) {
+  if (status >= 500 || [401, 403, 408, 429].includes(status)) return false;
+  if ([400, 404, 409, 422].includes(status)) return true;
+  return /^(22|23)\d{3}$|^PGRST1/.test(String(error?.code || ''));
+}
+const opKey = (op, key) => (op.op === 'delete' || op.op === 'update' ? op.id : op.row[key]);
+
 export function createStore({ client, indexedDB = globalThis.indexedDB, dbName = 'planner', autoFlush = true }) {
   const listeners = { change: new Set(), pending: new Set(), error: new Set() };
   const emit = (ev, arg) => listeners[ev].forEach((cb) => { try { cb(arg); } catch (e) { console.error(e); } });
@@ -50,11 +59,18 @@ export function createStore({ client, indexedDB = globalThis.indexedDB, dbName =
   async function refresh(table) {
     let res;
     lastPull[table] = Date.now();
+    const key = KEYS[table] || 'id';
+    const keysOf = async () => (await outbox()).filter((op) => op.table === table).map((op) => opKey(op, key));
+    // ключи правок, ждавших отправки ДО запроса: ответ сервера мог быть снят раньше, чем они дошли
+    const before0 = new Set(await keysOf());
+    const gen0 = flushGen;
     try { res = await client.from(table).select('*'); } catch { return; }
     if (res.error) return;
-    const pending = (await outbox()).filter((op) => op.table === table);
-    const key = KEYS[table] || 'id';
-    const pendingKeys = new Set(pending.map((op) => (op.op === 'delete' ? op.id : op.row[key])));
+    const pendingKeys = new Set([...before0, ...(await keysOf())]);
+    if (flushGen !== gen0 && pendingKeys.size) {
+      // пока шёл запрос, правки ушли на сервер — ответ мог устареть, запросим ещё раз позже
+      lastPull[table] = 0;
+    }
     const db = await dbp;
     const tx = db.transaction(table, 'readwrite');
     const st = tx.objectStore(table);
@@ -88,6 +104,19 @@ export function createStore({ client, indexedDB = globalThis.indexedDB, dbName =
     return full;
   }
 
+  // Правка существующей строки: на сервер уходят только изменённые поля.
+  async function patch(table, id, changes) {
+    const key = KEYS[table] || 'id';
+    const ch = { ...changes, updated_at: new Date().toISOString() };
+    delete ch[key];
+    let merged = null;
+    await enqueue(table, (st) => {
+      const r = st.get(id);
+      r.onsuccess = () => { merged = { ...(r.result || { [key]: id }), ...ch }; st.put(merged); };
+    }, { op: 'update', table, id, changes: ch });
+    return merged;
+  }
+
   async function remove(table, id) {
     await enqueue(table, (st) => st.delete(id), { op: 'delete', table, id });
   }
@@ -102,18 +131,19 @@ export function createStore({ client, indexedDB = globalThis.indexedDB, dbName =
 
   async function send(op) {
     const key = KEYS[op.table] || 'id';
-    const q = op.op === 'delete'
-      ? client.from(op.table).delete().eq(key, op.id)
-      : client.from(op.table).upsert(op.row);
+    const q = op.op === 'delete' ? client.from(op.table).delete().eq(key, op.id)
+      : op.op === 'update' ? client.from(op.table).update(op.changes).eq(key, op.id)
+        : client.from(op.table).upsert(op.row);
     const res = await q;
     if (res.error) {
-      if (isNetworkError(res.error)) throw new TypeError(res.error.message);
-      return res.error; // сервер отказал
+      if (isNetworkError(res.error) || !isPermanentRejection(res.error, res.status)) throw new TypeError(res.error.message);
+      return res.error; // сервер отказал навсегда
     }
     return null;
   }
 
   let running = null;
+  let flushGen = 0;
   function flush() {
     if (running) return running;
     running = (async () => {
@@ -126,6 +156,7 @@ export function createStore({ client, indexedDB = globalThis.indexedDB, dbName =
           let rejected;
           try { rejected = await send(op); } catch (e) { if (isNetworkError(e)) break; throw e; }
           await req(db.transaction('outbox', 'readwrite').objectStore('outbox').delete(op.seq));
+          flushGen += 1;
           emit('pending', await pendingCount());
           if (rejected) { emit('error', rejected); await refresh(op.table); }
         }
@@ -147,5 +178,5 @@ export function createStore({ client, indexedDB = globalThis.indexedDB, dbName =
     setInterval(async () => { if ((await pendingCount()) > 0) flush().catch(() => {}); }, 30000);
   }
 
-  return { list, refresh, upsert, remove, rpc, flush, pendingCount, on };
+  return { list, refresh, upsert, patch, remove, rpc, flush, pendingCount, on };
 }

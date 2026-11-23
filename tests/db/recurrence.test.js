@@ -91,13 +91,11 @@ test('split: «эта и все следующие» с середины', async
   const newId = (await db.query(`select split_recurrence($1, '{"title":"Йога 2"}'::jsonb, '2026-11-30') as id`, [t25.id])).rows[0].id;
 
   const old = (await taskDates(db, r.id)).map((x) => `${x.d} ${x.title}`);
-  assert.deepEqual(old, [
-    '2026-11-20 Йога', '2026-11-21 Йога', '2026-11-22 Йога', '2026-11-23 Йога', '2026-11-24 Йога',
-    '2026-11-26 Йога', // выполненная сохранилась
-  ]);
+  assert.deepEqual(old, ['2026-11-20 Йога', '2026-11-21 Йога', '2026-11-22 Йога', '2026-11-23 Йога', '2026-11-24 Йога']);
   const fresh = await taskDates(db, newId);
   assert.equal(fresh[0].d, '2026-11-25');
-  assert.ok(fresh.every((x) => x.title === 'Йога 2'));
+  // выполненная 26-го сохранилась со старым названием (переехала в новую серию), остальные — «Йога 2»
+  assert.deepEqual(fresh.filter((x) => x.title !== 'Йога 2').map((x) => x.d), ['2026-11-26']);
   const oldEnd = (await db.query(`select end_date::text as e from recurrences where id = $1`, [r.id])).rows[0].e;
   assert.equal(oldEnd, '2026-11-24');
 });
@@ -109,8 +107,8 @@ test('split не трогает «только эта» (is_exception)', async (
   await db.query(`update tasks set title = 'Йога в парке', is_exception = true where recurrence_id = $1 and occurrence_date = '2026-11-28'`, [r.id]);
   const t22 = (await db.query(`select id from tasks where recurrence_id = $1 and occurrence_date = '2026-11-22'`, [r.id])).rows[0];
   await db.query(`select split_recurrence($1, '{"time":"07:00"}'::jsonb, '2026-11-30')`, [t22.id]);
-  const exc = (await db.query(`select title from tasks where recurrence_id = $1 and occurrence_date = '2026-11-28'`, [r.id])).rows;
-  assert.deepEqual(exc, [{ title: 'Йога в парке' }]);
+  const exc = (await db.query(`select title, time::text as time from tasks where occurrence_date = '2026-11-28'`)).rows;
+  assert.deepEqual(exc, [{ title: 'Йога в парке', time: null }]);
 });
 
 test('end_recurrence_from: удалить эту и все следующие', async () => {
@@ -131,4 +129,44 @@ test('обычная задача не задета materialize', async () => {
   await db.query(`select materialize($1, '2026-11-22')`, [A]);
   const n = (await db.query(`select count(*)::int as n from tasks where recurrence_id is null`)).rows[0].n;
   assert.equal(n, 1);
+});
+
+test('fix C1: «до даты» у ежедневного повтора через split не падает', async () => {
+  const db = await makeDb();
+  const r = await addRec(db, { title: 'Йога', freq: 'daily', start_date: '2026-11-20' });
+  await db.query(`select materialize($1, '2026-11-30')`, [A]);
+  const t = (await db.query(`select id from tasks where recurrence_id = $1 and occurrence_date = '2026-11-22'`, [r.id])).rows[0];
+  const id = (await db.query(`select split_recurrence($1, '{"freq":"daily","weekdays":null,"end_date":"2026-11-25"}'::jsonb, '2026-11-30') as id`, [t.id])).rows[0].id;
+  assert.deepEqual((await taskDates(db, id)).map((x) => x.d), ['2026-11-22', '2026-11-23', '2026-11-24', '2026-11-25']);
+});
+
+test('fix C1: ежедневный → еженедельный через split не падает', async () => {
+  const db = await makeDb();
+  const r = await addRec(db, { title: 'Йога', freq: 'daily', start_date: '2026-11-16' });
+  await db.query(`select materialize($1, '2026-11-30')`, [A]);
+  const t = (await db.query(`select id from tasks where recurrence_id = $1 and occurrence_date = '2026-11-23'`, [r.id])).rows[0];
+  const id = (await db.query(`select split_recurrence($1, '{"freq":"weekly","weekdays":null}'::jsonb, '2026-11-30') as id`, [t.id])).rows[0].id;
+  assert.deepEqual((await taskDates(db, id)).map((x) => x.d), ['2026-11-23', '2026-11-30']);
+});
+
+test('fix I1: split не создаёт двойников у выполненных и «только эта»', async () => {
+  const db = await makeDb();
+  const r = await addRec(db, { title: 'Йога', freq: 'daily', start_date: '2026-11-20' });
+  await db.query(`select materialize($1, '2026-11-30')`, [A]);
+  await db.query(`update tasks set done = true where recurrence_id = $1 and occurrence_date = '2026-11-26'`, [r.id]);
+  await db.query(`update tasks set title = 'Йога в парке', is_exception = true where recurrence_id = $1 and occurrence_date = '2026-11-28'`, [r.id]);
+  const t = (await db.query(`select id from tasks where recurrence_id = $1 and occurrence_date = '2026-11-25'`, [r.id])).rows[0];
+  await db.query(`select split_recurrence($1, '{"title":"Йога 2"}'::jsonb, '2026-11-30')`, [t.id]);
+  const per = (await db.query(`select date::text as d, count(*)::int as n from tasks where date between '2026-11-20' and '2026-11-30' group by date order by date`)).rows;
+  assert.ok(per.every((x) => x.n === 1), JSON.stringify(per));
+});
+
+test('fix I1: «удалить эту и все следующие» убирает и будущие «только эта»', async () => {
+  const db = await makeDb();
+  const r = await addRec(db, { freq: 'daily', start_date: '2026-11-20' });
+  await db.query(`select materialize($1, '2026-11-30')`, [A]);
+  await db.query(`update tasks set is_exception = true, title = 'особая' where recurrence_id = $1 and occurrence_date = '2026-11-27'`, [r.id]);
+  const t = (await db.query(`select id from tasks where recurrence_id = $1 and occurrence_date = '2026-11-23'`, [r.id])).rows[0];
+  await db.query(`select end_recurrence_from($1)`, [t.id]);
+  assert.deepEqual((await taskDates(db, r.id)).map((x) => x.d), ['2026-11-20', '2026-11-21', '2026-11-22']);
 });

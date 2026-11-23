@@ -14,7 +14,7 @@ const MOODS = [['', 'обычная'], ['happy', 'весёлая — за вып
 const moodSelect = (img) => `<label class="lbl">Настроение<select class="field" name="mood">${MOODS.map(([v, l]) => `<option value="${v}" ${(img.mood || '') === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label>`;
 const wireMood = (body, img) => body.querySelector('[name=mood]').addEventListener('change', (e) => {
   img.mood = e.target.value || null;
-  store.upsert('images', { ...img });
+  store.patch('images', img.id, { mood: img.mood });
 });
 
 const catOptions = (selected) => CATEGORIES.map((c) => `<option value="${c.id}" ${c.id === selected ? 'selected' : ''}>${c.name}</option>`).join('');
@@ -141,7 +141,8 @@ function openQuoteSheet(img = null) {
         e.preventDefault();
         const text = f.text.value.trim();
         if (!text) { body.querySelector('.auth-error').textContent = 'Напиши фразу'; return; }
-        await store.upsert('images', { ...(img || { kind: 'quote', category: 'motivation', created_at: new Date().toISOString() }), text });
+        if (img) await store.patch('images', img.id, { text });
+        else await store.upsert('images', { kind: 'quote', category: 'motivation', created_at: new Date().toISOString(), text });
         close();
       });
     },
@@ -174,7 +175,7 @@ function openViewer(img) {
         <div class="editor-actions viewer-actions">
           <button class="icon-btn danger" type="button" data-act="del" aria-label="Удалить картинку">${icon('trash', 20)}</button></div>`;
       body.querySelector('.viewer img').src = (await imageSrc(img)) || '';
-      body.querySelector('[name=cat]').addEventListener('change', (e) => { img.category = e.target.value; store.upsert('images', { ...img }); });
+      body.querySelector('[name=cat]').addEventListener('change', (e) => { img.category = e.target.value; store.patch('images', img.id, { category: img.category }); });
       wireMood(body, img);
       body.querySelector('[data-act=del]').addEventListener('click', () => del(img, close));
     },

@@ -10,7 +10,9 @@ function fakeClient(initial = {}) {
   const c = {
     offline: false,
     failNext: 0, // сколько следующих запросов упадут как сетевые
-    serverReject: null, // id строки, которую сервер отвергнет (как RLS)
+    serverReject: null, // id строки, которую сервер отвергнет навсегда (конфликт 409)
+    nextError: null, // { error, status } — следующий ответ сервера с ошибкой
+    selectDelay: null, // Promise — задержать ответ select (снимок берётся в момент запроса)
     log,
     tables,
     net() {
@@ -20,10 +22,26 @@ function fakeClient(initial = {}) {
     from(table) {
       tables[table] ??= [];
       return {
-        select: async () => { c.net(); return { data: structuredClone(tables[table]), error: null }; },
+        select: async () => {
+          c.net();
+          const snap = structuredClone(tables[table]);
+          if (c.selectDelay) await c.selectDelay;
+          return { data: snap, error: null };
+        },
+        update: (changes) => ({
+          eq: async (_col, id) => {
+            c.net();
+            if (c.nextError) { const e = c.nextError; c.nextError = null; return { data: null, ...e }; }
+            const row = tables[table].find((r) => r.id === id);
+            if (row) Object.assign(row, changes);
+            log.push(`update ${table} ${id} ${Object.keys(changes).sort().join(',')}`);
+            return { data: null, error: null, status: 204 };
+          },
+        }),
         upsert: async (row) => {
           c.net();
-          if (row.id === c.serverReject) return { data: null, error: { code: '42501', message: 'row-level security' } };
+          if (c.nextError) { const e = c.nextError; c.nextError = null; return { data: null, ...e }; }
+          if (row.id === c.serverReject) return { data: null, error: { code: '23505', message: 'duplicate key' }, status: 409 };
           const i = tables[table].findIndex((r) => r.id === row.id);
           if (i >= 0) tables[table][i] = { ...row }; else tables[table].push({ ...row });
           log.push(`upsert ${table} ${row.title ?? row.id}`);
@@ -138,7 +156,7 @@ test('сервер отверг изменение: оно убирается и
   await store.upsert('tasks', { id: 'bad', title: 'x', date: '2026-11-23' });
   await store.flush();
   assert.equal(await store.pendingCount(), 0);
-  assert.deepEqual(errors, ['row-level security']);
+  assert.deepEqual(errors, ['duplicate key']);
 });
 
 test('rpc офлайн бросает OfflineError', async () => {
@@ -184,4 +202,58 @@ test('refresh без изменений не шлёт change (нет беско�
   client.tables.tasks[0].title = 'B';
   await store.refresh('tasks');
   assert.equal(changes, 1);
+});
+
+test('C2: ошибка сервера 503 оставляет правку в очереди', async () => {
+  const client = fakeClient();
+  const store = mk(client);
+  client.nextError = { error: { message: 'Service Unavailable' }, status: 503 };
+  await store.upsert('tasks', { title: 'A', date: '2026-11-23' });
+  await store.flush();
+  assert.equal(await store.pendingCount(), 1);
+  await store.flush();
+  assert.equal(await store.pendingCount(), 0);
+  assert.deepEqual(client.log, ['upsert tasks A']);
+});
+
+test('C2: 401/403 (протух вход) оставляет правку', async () => {
+  const client = fakeClient();
+  const store = mk(client);
+  client.nextError = { error: { code: '42501', message: 'row-level security' }, status: 403 };
+  await store.upsert('tasks', { title: 'A', date: '2026-11-23' });
+  await store.flush();
+  assert.equal(await store.pendingCount(), 1);
+});
+
+test('I2: patch отправляет только изменённые поля', async () => {
+  const id = 'p1';
+  const client = fakeClient({ tasks: [{ id, title: 'Йога', date: '2026-11-23', note: null, reminded_at: '2026-11-23T05:45:00Z' }] });
+  const store = mk(client);
+  await store.refresh('tasks');
+  await store.patch('tasks', id, { note: 'коврик' });
+  await store.flush();
+  assert.deepEqual(client.log, ['update tasks p1 note,updated_at']);
+  assert.equal(client.tables.tasks[0].reminded_at, '2026-11-23T05:45:00Z');
+  const cached = (await store.list('tasks'))[0];
+  assert.equal(cached.note, 'коврик');
+  assert.equal(cached.reminded_at, '2026-11-23T05:45:00Z');
+});
+
+test('I5: refresh, начатый до отправки правки, не откатывает её в кэше', async () => {
+  const id = 'r1';
+  const client = fakeClient({ tasks: [{ id, title: 'Старое', date: '2026-11-23' }] });
+  const store = mk(client);
+  await store.refresh('tasks');
+  client.offline = true;
+  await store.patch('tasks', id, { title: 'Новое' });
+  client.offline = false;
+  let release;
+  client.selectDelay = new Promise((r) => { release = r; });
+  const pending = store.refresh('tasks'); // снимок сервера — ещё «Старое»
+  await new Promise((r) => setTimeout(r, 5));
+  client.selectDelay = null;
+  await store.flush(); // правка ушла, очередь пуста
+  release();
+  await pending;
+  assert.equal((await store.list('tasks'))[0].title, 'Новое');
 });

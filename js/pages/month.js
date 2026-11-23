@@ -146,7 +146,9 @@ function openDateEditor({ row = null, date }) {
         const title = f.title.value.trim();
         if (!title) { body.querySelector('.auth-error').textContent = 'Напиши, что это за дата'; return; }
         if (!f.date.value) { body.querySelector('.auth-error').textContent = 'Выбери дату'; return; }
-        await store.upsert('special_dates', { ...r, title, date: f.date.value, kind, color: kind === 'red' ? color : null, yearly: f.yearly.checked, created_at: r.created_at || new Date().toISOString() });
+        const fields = { title, date: f.date.value, kind, color: kind === 'red' ? color : null, yearly: f.yearly.checked };
+        if (row) await store.patch('special_dates', r.id, fields);
+        else await store.upsert('special_dates', { ...fields, created_at: new Date().toISOString() });
         close();
       });
       body.querySelector('[data-act=delete]')?.addEventListener('click', async () => {
