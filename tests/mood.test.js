@@ -33,6 +33,14 @@ test('pickMoodImage: берёт картинки нужного настроен
   assert.equal(pickMoodImage([], 'happy', today), null);
 });
 
+test('pickMoodImage: весёлый день никогда не берёт грустную, грустный — весёлую', () => {
+  const imgs = [{ id: 'a', mood: 'sad' }, { id: 'b', mood: 'sad' }];
+  assert.equal(pickMoodImage(imgs, 'happy', today), null);
+  assert.equal(pickMoodImage([{ id: 'h', mood: 'happy' }], 'sad', today), null);
+  const mixed = [{ id: 'a', mood: 'sad' }, { id: 'n', mood: null }];
+  for (let i = 0; i < 5; i++) assert.equal(pickMoodImage(mixed, 'happy', today, i).id, 'n');
+});
+
 test('pickMoodImage: обычный день не показывает грустные, если есть другие', () => {
   const imgs = [{ id: 'a', mood: 'sad' }, { id: 'b', mood: null }, { id: 'c', mood: 'happy' }];
   for (let i = 0; i < 6; i++) assert.notEqual(pickMoodImage(imgs, null, today, i).id, 'a');

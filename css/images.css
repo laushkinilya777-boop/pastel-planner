@@ -3,8 +3,8 @@
 .iod-media img { display: block; width: 100%; max-height: 520px; object-fit: cover; }
 .iod-media .quote-card { border-radius: 0; min-height: 220px; }
 .iod-next {
-  position: absolute; right: 12px; bottom: 12px; display: inline-flex; align-items: center; gap: 6px;
-  min-height: 40px; padding: 0 14px; border: 0; border-radius: 999px; cursor: pointer; font-weight: 500;
+  position: absolute; right: 12px; bottom: 12px; width: 44px; height: 44px; border: 0; border-radius: 50%; cursor: pointer;
+  display: grid; place-items: center;
   background: rgba(255, 255, 255, .82); color: var(--ink); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
   box-shadow: 0 6px 18px -6px rgba(0, 0, 0, .25);
 }
@@ -70,14 +70,16 @@
 
 /* ── картинка дня по настроению ── */
 .iod-mood {
-  position: absolute; left: 12px; top: 12px; right: 12px; z-index: 1; margin: 0; width: fit-content; max-width: calc(100% - 24px);
-  padding: 8px 14px; border-radius: 999px; font-weight: 600; font-size: 14px;
+  position: absolute; left: 12px; top: 12px; z-index: 1; width: 48px; height: 48px; border-radius: 50%;
+  display: grid; place-items: center;
   background: rgba(255, 255, 255, .85); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
-  box-shadow: 0 6px 18px -6px rgba(0, 0, 0, .25);
+  box-shadow: 0 6px 18px -6px rgba(0, 0, 0, .3);
+  animation: mood-pop .6s cubic-bezier(.34, 1.6, .5, 1);
 }
+@keyframes mood-pop { from { transform: scale(.4) rotate(-20deg); opacity: 0; } }
 .iod.mood-happy { box-shadow: 0 0 0 3px color-mix(in srgb, var(--g3) 70%, white), var(--shadow); }
-.iod.mood-happy .iod-mood { color: #c2603e; }
-.iod.mood-sad .iod-mood { color: #5d6fa8; }
+.iod.mood-happy .iod-mood { color: #fff; background: linear-gradient(135deg, #ffb38f, #f57fa3); }
+.iod.mood-sad .iod-mood { color: #fff; background: linear-gradient(135deg, #9fb6ec, #a993e8); }
 .iod.mood-sad .iod-media img { filter: saturate(.85); }
 
 /* ── похвала за галочку ── */

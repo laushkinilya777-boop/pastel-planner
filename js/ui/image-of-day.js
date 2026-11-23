@@ -22,6 +22,7 @@ const MOOD_LINE = {
   happy: 'Все задачи сделаны — праздник!',
   sad: 'Задачи ещё ждут. Ничего, всё получится',
 };
+const MOOD_ICON = { happy: 'smile', sad: 'frown' };
 
 // mood: 'happy' | 'sad' | null — от него зависит, какую картинку показать.
 export async function renderImageOfDay(root, iso, mood = null) {
@@ -34,14 +35,15 @@ export async function renderImageOfDay(root, iso, mood = null) {
   let offset = getOffset(`${iso}:${mood || ''}`);
   const card = document.createElement('section');
   card.className = `iod${mood ? ` mood-${mood}` : ''}`;
-  card.innerHTML = `${mood ? `<p class="iod-mood">${MOOD_LINE[mood]}</p>` : ''}<div class="iod-media"></div>
-    <button class="iod-next" type="button" aria-label="Другая картинка">${icon('shuffle', 18)}<span>другая</span></button>`;
+  card.innerHTML = `${mood ? `<span class="iod-mood" role="img" aria-label="${MOOD_LINE[mood]}" title="${MOOD_LINE[mood]}">${icon(MOOD_ICON[mood], 26)}</span>` : ''}<div class="iod-media"></div>
+    <button class="iod-next" type="button" aria-label="Другая картинка" title="Другая картинка">${icon('shuffle', 20)}</button>`;
   root.appendChild(card);
   const media = card.querySelector('.iod-media');
 
   async function paint() {
     const img = pickMoodImage(images, mood, iso, offset);
     media.innerHTML = '';
+    if (!img) { media.appendChild(renderQuoteCard(mood === 'sad' ? 'Ничего, завтра получится' : 'Всё сделано! Ты умница')); return; }
     if (img.kind === 'quote') { media.appendChild(renderQuoteCard(img.text)); return; }
     const src = await imageSrc(img);
     if (!src) { media.appendChild(renderQuoteCard('Сегодня — хороший день')); return; }

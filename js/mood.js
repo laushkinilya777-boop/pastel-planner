@@ -14,12 +14,19 @@ export function dayMood(tasks, today, now = new Date()) {
   return null;
 }
 
-// Картинка под настроение; если подходящих нет — любая. В обычный день грустные не показываем.
+// Картинка под настроение. Если нужных нет — берём «обычные», но никогда противоположное настроение.
+// В обычный день грустные не показываем (если есть другие). null — подходящих нет вовсе.
+const OPPOSITE = { happy: 'sad', sad: 'happy' };
 export function pickMoodImage(images, mood, iso, offset = 0) {
-  const pool = mood
-    ? images.filter((i) => i.mood === mood)
-    : images.filter((i) => i.mood !== 'sad');
-  return pickImageForDate(pool.length ? pool : images, `${iso}:${mood || ''}`, offset);
+  let pool;
+  if (mood) {
+    pool = images.filter((i) => i.mood === mood);
+    if (!pool.length) pool = images.filter((i) => i.mood !== OPPOSITE[mood]);
+  } else {
+    pool = images.filter((i) => i.mood !== 'sad');
+    if (!pool.length) pool = images;
+  }
+  return pickImageForDate(pool, `${iso}:${mood || ''}`, offset);
 }
 
 function plural(n, one, few, many) {
