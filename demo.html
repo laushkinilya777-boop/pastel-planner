@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#fbf8ff">
+  <title>Мой планер</title>
+  <script>try{var d=JSON.parse(localStorage.getItem('planner-day'));if(d&&d.theme&&d.theme!=='opal')document.documentElement.dataset.theme=d.theme}catch(e){}</script>
+  <link rel="stylesheet" href="css/theme.css">
+  <link rel="stylesheet" href="css/layout.css">
+  <link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+  <nav class="nav">
+    <a href="#/today" class="active"><i data-icon="sun"></i>Сегодня</a>
+    <a href="#/week"><i data-icon="week"></i>Неделя</a>
+    <a href="#/month"><i data-icon="month"></i>Месяц</a>
+    <a href="#/images"><i data-icon="gallery"></i>Картинки</a>
+  </nav>
+
+  <main class="app" id="app">
+    <!-- Временная демо-страница для согласования вида (шаг 2). Заменится в шаге 7. -->
+    <div class="top-bar" id="top-bar"></div>
+
+    <header class="day-head">
+      <div id="ring-slot"></div>
+      <div class="day-meta">
+        <div class="wd">Понедельник</div><div class="mo">ноябрь 2026</div>
+        <div class="sum">Сделано <b id="sum">1 из 4</b></div>
+      </div>
+    </header>
+
+    <section class="panel">
+      <div class="timeline" id="tasks">
+        <div class="row"><span class="t">09:00</span><button class="check" aria-label="Отметить"></button><span class="title">Йога</span></div>
+        <div class="row done"><span class="t">11:30</span><button class="check" aria-label="Отметить"></button><span class="title">Позвонить маме</span></div>
+        <div class="row"><span class="t">15:00</span><button class="check" aria-label="Отметить"></button><span class="title">Дописать отчёт<span class="tag"><i data-icon="carried" data-size="12"></i>перенесено</span></span></div>
+        <div class="row"><span class="t"></span><button class="check" aria-label="Отметить"></button><span class="title">Купить корм котику</span></div>
+      </div>
+      <div class="actions">
+        <button class="btn"><i data-icon="plus" data-size="18"></i>Задача</button>
+        <button class="btn ghost"><i data-icon="history" data-size="18"></i>История</button>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-title"><i data-icon="target" data-size="18"></i>Цель недели</div>
+      <div class="goal"><b>Прочитать 4 книги</b><span id="goal-count">1 / 4</span></div>
+      <div id="liquid-slot"></div>
+      <div class="actions">
+        <button class="btn ghost" id="minus">−1</button>
+        <button class="btn" id="plus">+1 книга</button>
+      </div>
+    </section>
+  </main>
+
+  <script type="module">
+    import { hydrateIcons, icon } from './js/ui/icons.js';
+    import { createDayRing, setDayRing, createLiquid, setLiquid } from './js/ui/progress.js';
+    import { initDailyTheme, createWeatherChip } from './js/theme.js';
+    import { todayISO } from './js/dates.js';
+
+    hydrateIcons();
+    const today = todayISO();
+    document.getElementById('top-bar').appendChild(createWeatherChip(today));
+    initDailyTheme(today);
+
+    // кольцо дня
+    const rows = [...document.querySelectorAll('#tasks .row')];
+    const ring = createDayRing(0);
+    ring.insertAdjacentHTML('beforeend', '<div class="day-num">23</div>');
+    document.getElementById('ring-slot').replaceWith(ring);
+    const syncDay = () => {
+      const done = rows.filter((r) => r.classList.contains('done')).length;
+      document.getElementById('sum').textContent = `${done} из ${rows.length}`;
+      setDayRing(ring, (done / rows.length) * 100);
+    };
+    rows.forEach((r) => {
+      const c = r.querySelector('.check');
+      const paint = () => { c.innerHTML = r.classList.contains('done') ? icon('check', 14) : ''; };
+      paint();
+      c.addEventListener('click', () => { r.classList.toggle('done'); paint(); syncDay(); });
+    });
+    syncDay();
+
+    // капсула цели
+    let books = 1; const target = 4;
+    const liquid = createLiquid(0);
+    document.getElementById('liquid-slot').replaceWith(liquid);
+    const syncGoal = () => {
+      document.getElementById('goal-count').textContent = `${books} / ${target}`;
+      setLiquid(liquid, (books / target) * 100);
+    };
+    document.getElementById('plus').onclick = () => { books = Math.min(target, books + 1); syncGoal(); };
+    document.getElementById('minus').onclick = () => { books = Math.max(0, books - 1); syncGoal(); };
+    setTimeout(syncGoal, 300);
+  </script>
+</body>
+</html>

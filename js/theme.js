@@ -22,6 +22,12 @@ export function normalizeTheme(id) {
 
 export const weatherById = (id) => WEATHER.find((w) => w.id === id) || null;
 
+// Строка settings с сервера -> выбор дня, если он сделан сегодня (например, на другом устройстве).
+export function dayFromSettings(row, today) {
+  const w = row && row.day_date === today ? weatherById(row.day_weather) : null;
+  return w ? { date: today, weather: w.id, theme: w.theme } : null;
+}
+
 export function needsDailyPick(saved, today) {
   return !saved || saved.date !== today || !weatherById(saved.weather);
 }
@@ -43,12 +49,27 @@ function saveDay(day) {
   try { localStorage.setItem(KEY, JSON.stringify(day)); } catch { /* приватный режим */ }
 }
 
+let syncHook = null;
+// app.js передаёт сюда функцию, которая сохраняет выбор в settings на сервере.
+export function onWeatherPicked(fn) { syncHook = fn; }
+
 // Выбор погоды на сегодня: сохраняет, применяет тему, сообщает подписчикам.
-export function pickWeather(weatherId, today) {
+export function pickWeather(weatherId, today, { fromServer = false } = {}) {
   const w = weatherById(weatherId);
   saveDay({ date: today, weather: w.id, theme: w.theme });
   applyTheme(w.theme);
   document.dispatchEvent(new CustomEvent('daytheme', { detail: { date: today, weather: w.id } }));
+  if (!fromServer) syncHook?.(today, w.id);
+}
+
+// Пришли настройки с сервера: если погоду сегодня уже выбрали на другом устройстве — применяем и закрываем вопрос.
+export function applyServerDay(row, today) {
+  const day = dayFromSettings(row, today);
+  if (!day) return false;
+  const local = loadDay();
+  if (local?.date !== today || local.weather !== day.weather) pickWeather(day.weather, today, { fromServer: true });
+  document.querySelectorAll('.weather-sheet').forEach((sh) => sh.closest('.sheet-backdrop')?.remove());
+  return true;
 }
 
 // Окно «Какая сегодня погода?». Закрыть без выбора нельзя только при первом показе за день.
