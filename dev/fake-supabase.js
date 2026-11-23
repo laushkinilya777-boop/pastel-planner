@@ -4,6 +4,8 @@ const iso = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0
 const today = iso(new Date());
 const yesterday = iso(new Date(Date.now() - 86400000));
 const now = () => new Date().toISOString();
+const _d = new Date(); _d.setDate(_d.getDate() - ((_d.getDay() + 6) % 7));
+const weekMon = iso(_d);
 
 const db = {
   tasks: [
@@ -17,7 +19,15 @@ const db = {
   task_history: [
     { id: 1, task_id: 't3', field: 'date', old_value: yesterday, new_value: today, changed_at: now() },
   ],
-  goals: [], special_dates: [], images: [],
+  goals: [
+    { id: 'g1', title: 'Прочитать 2 книги', target: 2, manual_adjust: 1, period: 'week', period_start: weekMon },
+    { id: 'g2', title: 'Йога 12 раз', target: 12, manual_adjust: 4, period: 'month', period_start: today.slice(0, 8) + '01' },
+  ],
+  special_dates: [
+    { id: 's1', title: 'ДР мамы', date: '1970-' + today.slice(5, 8) + '27', kind: 'red', color: '#e8577f', yearly: true },
+    { id: 's2', title: 'Сдать проект', date: today.slice(0, 8) + '28', kind: 'deadline', yearly: false },
+  ],
+  images: [],
   settings: [{ user_id: uid, tz: 'Europe/Moscow' }],
 };
 
