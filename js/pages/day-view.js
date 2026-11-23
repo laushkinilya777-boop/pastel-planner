@@ -5,6 +5,7 @@ import { renderTaskRow } from '../ui/task-item.js';
 import { openTaskEditor } from '../ui/task-editor.js';
 import { toast } from '../ui/sheet.js';
 import { icon } from '../ui/icons.js';
+import { renderImageOfDay } from '../ui/image-of-day.js';
 import { sortTasks, dayProgress, newTaskDraft } from '../tasks.js';
 import { addDays, todayISO, parseISODate, formatDayTitle } from '../dates.js';
 
@@ -62,8 +63,10 @@ export function renderDay(root, { date, mode, user }) {
     }));
   }
 
+  let iodDate = null;
   async function refresh() {
     renderSwitch();
+    if (iodDate !== current) { iodDate = current; renderImageOfDay(root.querySelector('#image-of-day'), current); }
     const d = parseISODate(current);
     num.textContent = d.getDate();
     root.querySelector('.wd').textContent = formatDayTitle(current).split(',')[0];
@@ -102,6 +105,7 @@ export function renderDay(root, { date, mode, user }) {
   let timer;
   const off = store.on('change', (table) => {
     if (table === 'tasks') { clearTimeout(timer); timer = setTimeout(refresh, 60); }
+    if (table === 'images') { iodDate = null; clearTimeout(timer); timer = setTimeout(refresh, 60); }
   });
   refresh();
   return () => { off(); clearTimeout(timer); };

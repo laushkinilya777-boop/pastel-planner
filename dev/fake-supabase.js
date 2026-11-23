@@ -31,7 +31,10 @@ const db = {
     { id: 's1', title: 'ДР мамы', date: '1970-' + today.slice(5, 8) + '27', kind: 'red', color: '#e8577f', yearly: true },
     { id: 's2', title: 'Сдать проект', date: today.slice(0, 8) + '28', kind: 'deadline', yearly: false },
   ],
-  images: [],
+  images: [
+    { id: 'i1', kind: 'quote', text: 'Маленькие шаги — тоже шаги', category: 'motivation', created_at: now() },
+    { id: 'i2', kind: 'link', url: 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=900', category: 'cats', created_at: now() },
+  ],
   settings: [{ user_id: uid, tz: 'Europe/Moscow' }],
 };
 
