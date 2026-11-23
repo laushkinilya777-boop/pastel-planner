@@ -3,9 +3,10 @@ import { store } from '../supabase.js';
 import { createDayRing, setDayRing } from '../ui/progress.js';
 import { renderTaskRow } from '../ui/task-item.js';
 import { openTaskEditor } from '../ui/task-editor.js';
-import { toast } from '../ui/sheet.js';
 import { icon } from '../ui/icons.js';
 import { renderImageOfDay } from '../ui/image-of-day.js';
+import { celebrate } from '../ui/celebrate.js';
+import { dayMood } from '../mood.js';
 import { sortTasks, dayProgress, newTaskDraft } from '../tasks.js';
 import { addDays, todayISO, parseISODate, formatDayTitle } from '../dates.js';
 
@@ -63,16 +64,18 @@ export function renderDay(root, { date, mode, user }) {
     }));
   }
 
-  let iodDate = null;
+  let iodKey = null;
   async function refresh() {
     renderSwitch();
-    if (iodDate !== current) { iodDate = current; renderImageOfDay(root.querySelector('#image-of-day'), current); }
     const d = parseISODate(current);
     num.textContent = d.getDate();
     root.querySelector('.wd').textContent = formatDayTitle(current).split(',')[0];
     root.querySelector('.mo').textContent = `${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
     const tasks = sortTasks(await store.list('tasks', (t) => t.date === current));
     const p = dayProgress(tasks);
+    // картинка дня по настроению: весёлая, когда всё сделано, грустная — когда задачи ждут (только для сегодня)
+    const mood = current === todayISO() ? dayMood(tasks, current, new Date()) : null;
+    if (iodKey !== `${current}:${mood}`) { iodKey = `${current}:${mood}`; renderImageOfDay(root.querySelector('#image-of-day'), current, mood); }
     setDayRing(ring, p.percent);
     sum.innerHTML = p.total ? `Сделано <b>${p.done} из ${p.total}</b>` : 'Планов пока нет';
     list.innerHTML = '';
@@ -85,7 +88,7 @@ export function renderDay(root, { date, mode, user }) {
         today,
         onToggle: async (task) => {
           await store.upsert('tasks', { ...task, done: !task.done, done_at: task.done ? null : new Date().toISOString() });
-          if (!task.done && p.done + 1 === p.total) toast('Все задачи дня выполнены!');
+          if (!task.done) celebrate({ done: p.done + 1, total: p.total });
         },
         onOpen: (task) => openTaskEditor({ task, date: current, user }),
       }));
@@ -105,7 +108,7 @@ export function renderDay(root, { date, mode, user }) {
   let timer;
   const off = store.on('change', (table) => {
     if (table === 'tasks') { clearTimeout(timer); timer = setTimeout(refresh, 60); }
-    if (table === 'images') { iodDate = null; clearTimeout(timer); timer = setTimeout(refresh, 60); }
+    if (table === 'images') { iodKey = null; clearTimeout(timer); timer = setTimeout(refresh, 60); }
   });
   refresh();
   return () => { off(); clearTimeout(timer); };

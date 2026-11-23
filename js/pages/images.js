@@ -10,6 +10,13 @@ import { CATEGORIES, isImageUrl } from '../images.js';
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 let filter = 'all';
 
+const MOODS = [['', 'обычная'], ['happy', 'весёлая — за выполненное'], ['sad', 'грустная — когда задачи ждут']];
+const moodSelect = (img) => `<label class="lbl">Настроение<select class="field" name="mood">${MOODS.map(([v, l]) => `<option value="${v}" ${(img.mood || '') === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label>`;
+const wireMood = (body, img) => body.querySelector('[name=mood]').addEventListener('change', (e) => {
+  img.mood = e.target.value || null;
+  store.upsert('images', { ...img });
+});
+
 const catOptions = (selected) => CATEGORIES.map((c) => `<option value="${c.id}" ${c.id === selected ? 'selected' : ''}>${c.name}</option>`).join('');
 
 export function render(root, _p, { user }) {
@@ -147,9 +154,10 @@ function openViewer(img) {
       title: 'Фраза',
       build(body, close) {
         body.appendChild(renderQuoteCard(img.text));
-        body.insertAdjacentHTML('beforeend', `<div class="editor-actions viewer-actions">
+        body.insertAdjacentHTML('beforeend', `<div class="editor">${moodSelect(img)}</div><div class="editor-actions viewer-actions">
           <button class="btn ghost" type="button" data-act="edit">Изменить</button>
           <button class="icon-btn danger" type="button" data-act="del" aria-label="Удалить">${icon('trash', 20)}</button></div>`);
+        wireMood(body, img);
         body.querySelector('[data-act=edit]').addEventListener('click', () => { close(); openQuoteSheet(img); });
         body.querySelector('[data-act=del]').addEventListener('click', () => del(img, close));
       },
@@ -161,11 +169,13 @@ function openViewer(img) {
     wide: true,
     build: async (body, close) => {
       body.innerHTML = `<div class="viewer"><img alt=""></div>
-        <label class="lbl">Категория<select class="field" name="cat">${catOptions(img.category)}</select></label>
+        <div class="editor"><label class="lbl">Категория<select class="field" name="cat">${catOptions(img.category)}</select></label>
+        ${moodSelect(img)}</div>
         <div class="editor-actions viewer-actions">
           <button class="icon-btn danger" type="button" data-act="del" aria-label="Удалить картинку">${icon('trash', 20)}</button></div>`;
       body.querySelector('.viewer img').src = (await imageSrc(img)) || '';
-      body.querySelector('[name=cat]').addEventListener('change', (e) => store.upsert('images', { ...img, category: e.target.value }));
+      body.querySelector('[name=cat]').addEventListener('change', (e) => { img.category = e.target.value; store.upsert('images', { ...img }); });
+      wireMood(body, img);
       body.querySelector('[data-act=del]').addEventListener('click', () => del(img, close));
     },
   });

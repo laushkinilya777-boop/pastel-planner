@@ -8,6 +8,7 @@ import { icon, hydrateIcons } from './ui/icons.js';
 import { todayISO } from './dates.js';
 import { initDailyTheme, createWeatherChip, onWeatherPicked, applyServerDay } from './theme.js';
 import { placeholder } from './pages/placeholder.js';
+import { backfillStarterMoods } from './ui/starter-picker.js';
 
 const PAGES = {
   today: () => import('./pages/today.js').catch(() => placeholder('Сегодня', 'sun', 'Здесь появится план на сегодня — шаг 8')),
@@ -77,6 +78,7 @@ function startApp() {
     store.upsert('settings', { user_id: user.id, day_date: date, day_weather: weather }).catch(() => {}));
   initDailyTheme(today);
   ensureSettings().catch(() => {});
+  setTimeout(() => backfillStarterMoods().catch(() => {}), 3000);
   store.on('change', (table) => {
     if (table === 'settings') store.list('settings').then((rs) => applyServerDay(rs.find((r) => r.user_id === user.id), todayISO()));
   });

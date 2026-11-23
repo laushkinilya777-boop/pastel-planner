@@ -44,6 +44,7 @@ function query(table) {
     _filters: [],
     select() { return q; },
     eq(col, val) { q._filters.push([col, val]); return q; },
+    limit() { return q; },
     maybeSingle() { return Promise.resolve({ data: q._rows()[0] || null, error: null }); },
     _rows() { return db[table].filter((r) => q._filters.every(([c, v]) => r[c] === v)); },
     then(res, rej) { return Promise.resolve({ data: structuredClone(q._rows()), error: null }).then(res, rej); },

@@ -67,3 +67,31 @@
 .pick:disabled .pick-mark { color: var(--ink-2); }
 .starter-foot { position: sticky; bottom: 0; padding: 12px 0 4px; background: linear-gradient(transparent, rgba(255, 255, 255, .95) 30%); }
 .starter-foot .btn:disabled { opacity: .5; }
+
+/* ── картинка дня по настроению ── */
+.iod-mood {
+  position: absolute; left: 12px; top: 12px; right: 12px; z-index: 1; margin: 0; width: fit-content; max-width: calc(100% - 24px);
+  padding: 8px 14px; border-radius: 999px; font-weight: 600; font-size: 14px;
+  background: rgba(255, 255, 255, .85); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  box-shadow: 0 6px 18px -6px rgba(0, 0, 0, .25);
+}
+.iod.mood-happy { box-shadow: 0 0 0 3px color-mix(in srgb, var(--g3) 70%, white), var(--shadow); }
+.iod.mood-happy .iod-mood { color: #c2603e; }
+.iod.mood-sad .iod-mood { color: #5d6fa8; }
+.iod.mood-sad .iod-media img { filter: saturate(.85); }
+
+/* ── похвала за галочку ── */
+.cheer {
+  position: fixed; left: 50%; bottom: calc(100px + env(safe-area-inset-bottom)); z-index: 70;
+  width: min(300px, calc(100vw - 32px)); translate: -50% 0; border-radius: 26px; overflow: hidden; cursor: pointer;
+  background: #fff; box-shadow: 0 24px 50px -16px rgba(var(--tint), .55), 0 0 0 1px rgba(255, 255, 255, .9);
+  animation: cheer-in .5s cubic-bezier(.34, 1.4, .5, 1); transition: opacity .35s, transform .35s;
+}
+.cheer.out { opacity: 0; transform: translateY(16px) scale(.96); }
+.cheer-media img { display: block; width: 100%; height: 180px; object-fit: cover; }
+.cheer-media .quote-card { border-radius: 0; min-height: 140px; }
+.cheer-text { margin: 0; padding: 12px 16px 14px; text-align: center; font-weight: 600; }
+.cheer.all { box-shadow: 0 0 0 4px color-mix(in srgb, var(--g2) 40%, transparent), 0 24px 50px -16px rgba(var(--tint), .6); }
+.cheer.all .cheer-text { background: var(--accent); color: #fff; }
+@keyframes cheer-in { from { opacity: 0; transform: translateY(30px) scale(.9); } }
+@media (min-width: 900px) { .cheer { left: auto; right: 32px; bottom: 32px; translate: none; } }

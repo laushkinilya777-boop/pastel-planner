@@ -2,7 +2,8 @@
 import { store } from '../supabase.js';
 import { imageSrc } from './image-tools.js';
 import { icon } from './icons.js';
-import { pickImageForDate, quoteGradient } from '../images.js';
+import { quoteGradient } from '../images.js';
+import { pickMoodImage } from '../mood.js';
 
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const key = (iso) => `iod:${iso}`;
@@ -17,23 +18,29 @@ export function renderQuoteCard(text) {
   return el;
 }
 
-export async function renderImageOfDay(root, iso) {
+const MOOD_LINE = {
+  happy: 'Все задачи сделаны — праздник!',
+  sad: 'Задачи ещё ждут. Ничего, всё получится',
+};
+
+// mood: 'happy' | 'sad' | null — от него зависит, какую картинку показать.
+export async function renderImageOfDay(root, iso, mood = null) {
   const images = await store.list('images');
   root.innerHTML = '';
   if (!images.length) {
     root.innerHTML = `<a class="panel iod-empty" href="#/images">${icon('heart', 22)}<span>Добавь котиков, собачек и мотивацию в разделе «Картинки» — здесь появится картинка дня</span></a>`;
     return;
   }
-  let offset = getOffset(iso);
+  let offset = getOffset(`${iso}:${mood || ''}`);
   const card = document.createElement('section');
-  card.className = 'iod';
-  card.innerHTML = `<div class="iod-media"></div>
+  card.className = `iod${mood ? ` mood-${mood}` : ''}`;
+  card.innerHTML = `${mood ? `<p class="iod-mood">${MOOD_LINE[mood]}</p>` : ''}<div class="iod-media"></div>
     <button class="iod-next" type="button" aria-label="Другая картинка">${icon('shuffle', 18)}<span>другая</span></button>`;
   root.appendChild(card);
   const media = card.querySelector('.iod-media');
 
   async function paint() {
-    const img = pickImageForDate(images, iso, offset);
+    const img = pickMoodImage(images, mood, iso, offset);
     media.innerHTML = '';
     if (img.kind === 'quote') { media.appendChild(renderQuoteCard(img.text)); return; }
     const src = await imageSrc(img);
@@ -45,6 +52,6 @@ export async function renderImageOfDay(root, iso) {
     el.onerror = () => { media.innerHTML = ''; media.appendChild(renderQuoteCard('Картинка не загрузилась, но ты всё равно молодец')); };
     media.appendChild(el);
   }
-  card.querySelector('.iod-next').addEventListener('click', () => { offset += 1; setOffset(iso, offset); paint(); });
+  card.querySelector('.iod-next').addEventListener('click', () => { offset += 1; setOffset(`${iso}:${mood || ''}`, offset); paint(); });
   paint();
 }

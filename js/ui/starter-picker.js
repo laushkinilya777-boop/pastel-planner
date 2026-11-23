@@ -1,9 +1,23 @@
 // Окно «Стартовый набор»: отмечаешь понравившиеся фото и фразы — они добавляются в подборку.
-import { store } from '../supabase.js';
+import { client, store } from '../supabase.js';
 import { openSheet, toast } from './sheet.js';
 import { renderQuoteCard } from './image-of-day.js';
 import { icon } from './icons.js';
 import { STARTER, STARTER_GROUPS, starterId, starterRow } from '../starter.js';
+
+// Картинкам из стартового набора, добавленным раньше, проставляем настроение (один раз).
+export async function backfillStarterMoods() {
+  try { if (localStorage.getItem('starter-moods-1')) return; } catch { return; }
+  // поле mood появляется после SQL 009 — без него не трогаем
+  const probe = await client.from('images').select('mood').limit(1);
+  if (probe.error) return;
+  const byId = new Map(STARTER.filter((s) => s.mood).map((s) => [starterId(s.key), s.mood]));
+  const images = await store.list('images');
+  for (const img of images) {
+    if (!img.mood && byId.has(img.id)) await store.upsert('images', { ...img, mood: byId.get(img.id) });
+  }
+  try { localStorage.setItem('starter-moods-1', '1'); } catch { /* ничего */ }
+}
 
 export async function openStarterPicker() {
   const have = new Set((await store.list('images')).map((i) => i.id));
