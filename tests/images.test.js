@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { fitWithin, pickImageForDate, quoteGradient, isImageUrl } from '../js/images.js';
+import { fitWithin, pickImageForDate, quoteGradient, isImageUrl, allCategories, categoryName } from '../js/images.js';
 
 test('fitWithin: уменьшает фото с iPhone до 1600 по длинной стороне', () => {
   assert.deepEqual(fitWithin(4032, 3024), { w: 1600, h: 1200 });
@@ -34,4 +34,12 @@ test('isImageUrl: только https-ссылки', () => {
   assert.equal(isImageUrl('http://example.com/cat.jpg'), false);
   assert.equal(isImageUrl('javascript:alert(1)'), false);
   assert.equal(isImageUrl('котик'), false);
+});
+
+test('allCategories: стандартные + свои по порядку, «Мои» в конце', () => {
+  const custom = [{ id: 'c2', name: 'Аниме', sort: 2 }, { id: 'c1', name: 'Цветы', sort: 1 }];
+  assert.deepEqual(allCategories(custom).map((c) => c.name), ['Котики', 'Собачки', 'Мотивация', 'Цветы', 'Аниме', 'Мои']);
+  assert.equal(categoryName('c2', custom), 'Аниме');
+  assert.equal(categoryName('dogs', custom), 'Собачки');
+  assert.equal(categoryName('удалённая', custom), 'Мои');
 });

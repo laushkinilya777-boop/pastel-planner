@@ -41,3 +41,13 @@ export const CATEGORIES = [
   { id: 'motivation', name: 'Мотивация' },
   { id: 'mine', name: 'Мои' },
 ];
+
+// Стандартные + свои категории (из таблицы image_categories); «Мои» всегда последняя.
+export function allCategories(custom = []) {
+  const own = [...custom].sort((a, b) => (a.sort || 0) - (b.sort || 0)).map((c) => ({ id: c.id, name: c.name, custom: true }));
+  return [...CATEGORIES.slice(0, 3), ...own, CATEGORIES[3]];
+}
+
+export function categoryName(id, custom = []) {
+  return allCategories(custom).find((c) => c.id === id)?.name || 'Мои';
+}

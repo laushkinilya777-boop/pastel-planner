@@ -5,7 +5,7 @@ import { uploadPhoto, removePhoto, imageSrc } from '../ui/image-tools.js';
 import { renderQuoteCard } from '../ui/image-of-day.js';
 import { openStarterPicker } from '../ui/starter-picker.js';
 import { icon } from '../ui/icons.js';
-import { CATEGORIES, isImageUrl } from '../images.js';
+import { allCategories, isImageUrl } from '../images.js';
 
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 let filter = 'all';
@@ -17,7 +17,11 @@ const wireMood = (body, img) => body.querySelector('[name=mood]').addEventListen
   store.patch('images', img.id, { mood: img.mood });
 });
 
-const catOptions = (selected) => CATEGORIES.map((c) => `<option value="${c.id}" ${c.id === selected ? 'selected' : ''}>${c.name}</option>`).join('');
+// свои категории хранятся в таблице image_categories; держим свежий список под рукой
+let custom = [];
+const loadCustom = async () => { custom = await store.list('image_categories'); return custom; };
+const cats = () => allCategories(custom);
+const catOptions = (selected) => cats().map((c) => `<option value="${c.id}" ${c.id === selected ? 'selected' : ''}>${esc(c.name)}</option>`).join('');
 
 export function render(root, _p, { user }) {
   root.innerHTML = `
@@ -28,21 +32,29 @@ export function render(root, _p, { user }) {
       <button class="btn ghost" type="button" data-act="quote">${icon('plus', 18)}Фраза</button>
       <button class="btn ghost" type="button" data-act="starter">${icon('shuffle', 18)}Стартовый набор</button>
     </div>
-    <div class="filters" role="tablist" aria-label="Категории">
-      ${[{ id: 'all', name: 'Все' }, ...CATEGORIES].map((c) => `<button role="tab" data-f="${c.id}">${c.name}</button>`).join('')}
-    </div>
+    <div class="filters" role="tablist" aria-label="Категории"></div>
     <div class="gallery"></div>`;
 
   const gallery = root.querySelector('.gallery');
-  const paintFilters = () => root.querySelectorAll('[data-f]').forEach((b) => b.setAttribute('aria-selected', b.dataset.f === filter));
-  root.querySelectorAll('[data-f]').forEach((b) => b.addEventListener('click', () => { filter = b.dataset.f; paintFilters(); refresh(); }));
+  const filtersBox = root.querySelector('.filters');
+  function paintFilters() {
+    if (filter !== 'all' && !cats().some((c) => c.id === filter)) filter = 'all';
+    const cur = cats().find((c) => c.id === filter);
+    filtersBox.innerHTML = [{ id: 'all', name: 'Все' }, ...cats()]
+      .map((c) => `<button role="tab" data-f="${c.id}" aria-selected="${c.id === filter}">${esc(c.name)}</button>`).join('')
+      + (cur?.custom ? `<button class="f-tool" type="button" data-cat-edit aria-label="Изменить категорию">${icon('edit', 16)}</button>` : '')
+      + `<button class="f-tool" type="button" data-cat-add aria-label="Новая категория">${icon('plus', 16)}</button>`;
+    filtersBox.querySelectorAll('[data-f]').forEach((b) => b.addEventListener('click', () => { filter = b.dataset.f; paintFilters(); refresh(); }));
+    filtersBox.querySelector('[data-cat-add]').addEventListener('click', () => openCategorySheet());
+    filtersBox.querySelector('[data-cat-edit]')?.addEventListener('click', () => openCategorySheet(cur));
+  }
   paintFilters();
 
   root.querySelector('input[type=file]').addEventListener('change', async (e) => {
     const files = [...e.target.files];
     e.target.value = '';
     if (!files.length) return;
-    const category = await choose({ title: 'Куда положить?', options: CATEGORIES.map((c) => ({ label: c.name, value: c.id })) });
+    const category = await choose({ title: 'Куда положить?', options: cats().map((c) => ({ label: c.name, value: c.id })) });
     if (!category) return;
     toast(files.length > 1 ? `Загружаем ${files.length} фото…` : 'Загружаем фото…');
     for (const f of files) {
@@ -57,6 +69,8 @@ export function render(root, _p, { user }) {
   root.querySelector('[data-act=starter]').addEventListener('click', () => openStarterPicker());
 
   async function refresh() {
+    await loadCustom();
+    paintFilters();
     const all = (await store.list('images')).sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)));
     const list = filter === 'all' ? all : all.filter((i) => i.category === filter);
     gallery.innerHTML = list.length ? '' : `<p class="empty-line">${filter === 'all' ? 'Пока пусто. Добавь фото, ссылку на картинку из Pinterest или фразу' : 'В этой категории пока пусто'}</p>`;
@@ -80,9 +94,46 @@ export function render(root, _p, { user }) {
   }
 
   let timer;
-  const off = store.on('change', (t) => { if (t === 'images') { clearTimeout(timer); timer = setTimeout(refresh, 60); } });
+  const off = store.on('change', (t) => { if (t === 'images' || t === 'image_categories') { clearTimeout(timer); timer = setTimeout(refresh, 60); } });
   refresh();
   return () => { off(); clearTimeout(timer); };
+}
+
+// Новая категория или правка своей (переименовать / удалить — картинки переедут в «Мои»).
+function openCategorySheet(cat = null) {
+  openSheet({
+    title: cat ? 'Категория' : 'Новая категория',
+    build(body, close) {
+      body.innerHTML = `
+        <form class="editor" novalidate>
+          <input class="field" name="name" maxlength="30" placeholder="Например: цветы, аниме, вдохновение" aria-label="Название категории" value="${esc(cat?.name)}" autofocus>
+          <p class="auth-error" role="alert"></p>
+          <div class="editor-actions">
+            <button class="btn" type="submit">${icon('check', 18)}Сохранить</button>
+            ${cat ? `<button class="icon-btn danger" type="button" data-act="del" aria-label="Удалить категорию">${icon('trash', 20)}</button>` : ''}
+          </div>
+        </form>`;
+      const f = body.querySelector('form');
+      f.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const name = f.name.value.trim();
+        const err = body.querySelector('.auth-error');
+        if (!name) { err.textContent = 'Напиши название'; return; }
+        if (cats().some((c) => c.name.toLowerCase() === name.toLowerCase() && c.id !== cat?.id)) { err.textContent = 'Такая категория уже есть'; return; }
+        if (cat) await store.patch('image_categories', cat.id, { name });
+        else { const row = await store.upsert('image_categories', { name, sort: Date.now(), created_at: new Date().toISOString() }); filter = row.id; }
+        close();
+      });
+      body.querySelector('[data-act=del]')?.addEventListener('click', async () => {
+        const ok = await choose({ title: 'Удалить категорию?', text: `Картинки из «${cat.name}» переедут в «Мои»`, options: [{ label: 'Удалить', value: true, tone: 'danger' }, { label: 'Отмена', value: false }] });
+        if (!ok) return;
+        for (const img of await store.list('images', (i) => i.category === cat.id)) await store.patch('images', img.id, { category: 'mine' });
+        await store.remove('image_categories', cat.id);
+        filter = 'all';
+        close();
+      });
+    },
+  });
 }
 
 function openLinkSheet() {

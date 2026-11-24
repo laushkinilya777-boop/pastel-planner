@@ -1,7 +1,7 @@
 // Офлайн-хранилище: кэш таблиц в IndexedDB + очередь изменений (outbox).
 // Правки сразу видны на экране, а на сервер уходят, когда есть связь.
 
-export const TABLES = ['tasks', 'goals', 'special_dates', 'recurrences', 'images', 'task_history', 'settings', 'habits', 'habit_logs', 'savings_jars', 'money_entries', 'budget_plans', 'ideas'];
+export const TABLES = ['tasks', 'goals', 'special_dates', 'recurrences', 'images', 'task_history', 'settings', 'habits', 'habit_logs', 'savings_jars', 'money_entries', 'budget_plans', 'ideas', 'image_categories'];
 const KEYS = { settings: 'user_id' };
 
 export class OfflineError extends Error {
@@ -28,8 +28,8 @@ export function createStore({ client, indexedDB = globalThis.indexedDB, dbName =
   const emit = (ev, arg) => listeners[ev].forEach((cb) => { try { cb(arg); } catch (e) { console.error(e); } });
 
   const dbp = new Promise((resolve, reject) => {
-    // версия 2 — добавлены привычки, бюджет, идеи; существующие хранилища не трогаем
-    const open = indexedDB.open(dbName, 2);
+    // версия 2 — привычки, бюджет, идеи; 3 — свои категории картинок; существующие хранилища не трогаем
+    const open = indexedDB.open(dbName, 3);
     open.onupgradeneeded = () => {
       const db = open.result;
       for (const t of TABLES) if (!db.objectStoreNames.contains(t)) db.createObjectStore(t, { keyPath: KEYS[t] || 'id' });

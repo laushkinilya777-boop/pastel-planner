@@ -103,3 +103,10 @@ test('extras: сумма записи бюджета > 0, у задачи ест
   const t = await insertTask(db, { user_id: A, title: 'Отчёт', date: '2026-11-24', due_time: '18:00' });
   assert.equal(t.due_time, '18:00:00');
 });
+
+test('extras 2: свои категории картинок под RLS', async () => {
+  const db = await makeDb();
+  await db.query(`insert into image_categories (user_id, name) values ($1, 'Цветы')`, [A]);
+  const rows = await asUser(db, B, async (d) => (await d.query('select * from image_categories')).rows);
+  assert.equal(rows.length, 0);
+});

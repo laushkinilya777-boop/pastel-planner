@@ -97,3 +97,4 @@
 .cheer.all .cheer-text { background: var(--accent); color: #fff; }
 @keyframes cheer-in { from { opacity: 0; transform: translateY(30px) scale(.9); } }
 @media (min-width: 900px) { .cheer { left: auto; right: 32px; bottom: 32px; translate: none; } }
+.filters .f-tool { width: 38px; padding: 0; display: grid; place-items: center; color: var(--ink-2); }
