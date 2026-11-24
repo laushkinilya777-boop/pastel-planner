@@ -5,6 +5,7 @@ const ITEMS = [
   { name: 'week', href: '#/week', icon: 'week', label: 'Неделя' },
   { name: 'month', href: '#/month', icon: 'month', label: 'Месяц' },
   { name: 'habits', href: '#/habits', icon: 'habit', label: 'Привычки' },
+  { name: 'budget', href: '#/budget', icon: 'wallet', label: 'Бюджет' },
   { name: 'images', href: '#/images', icon: 'gallery', label: 'Картинки' },
 ];
 

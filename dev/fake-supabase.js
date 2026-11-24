@@ -37,6 +37,18 @@ const db = {
     { id: 'i2', kind: 'link', url: 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=900', category: 'cats', created_at: now() },
   ],
   settings: [{ user_id: uid, tz: 'Europe/Moscow' }],
+  savings_jars: [{ id: 'j1', title: 'Отпуск', target: 60000, color: 'peach', archived: false }],
+  money_entries: [
+    { id: 'm1', date: today.slice(0, 8) + '01', kind: 'income', amount: 45000, source: 'Зарплата', created_at: now() },
+    { id: 'm2', date: today.slice(0, 8) + '03', kind: 'expense', amount: 3200, target: 'Продукты', created_at: now() },
+    { id: 'm3', date: today.slice(0, 8) + '10', kind: 'expense', amount: 1800, target: 'Кафе', note: 'с подругой', created_at: now() },
+    { id: 'm4', date: today.slice(0, 8) + '15', kind: 'save', amount: 8000, jar_id: 'j1', created_at: now() },
+    { id: 'm5', date: today.slice(0, 8) + '18', kind: 'expense', amount: 5600, target: 'Одежда', created_at: now() },
+  ],
+  budget_plans: [
+    { id: 'p1', month: today.slice(0, 8) + '01', category: 'Продукты', kind: 'expense', planned: 10000, sort: 1 },
+    { id: 'p2', month: today.slice(0, 8) + '01', category: 'Кафе', kind: 'expense', planned: 1500, sort: 2 },
+  ],
   habits: [
     { id: 'h1', title: 'Вода 2 л', color: 'sky', weekdays: null, archived: false, sort: 1 },
     { id: 'h2', title: 'Чтение 20 минут', color: 'lilac', weekdays: null, archived: false, sort: 2 },
