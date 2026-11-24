@@ -2,7 +2,7 @@
 const CACHE = 'planner-v2';
 const SHELL = [
   './', './index.html', './manifest.webmanifest',
-  './css/theme.css', './css/layout.css', './css/app.css', './css/week-views.css', './css/images.css', './css/habits.css', './css/budget.css',
+  './css/theme.css', './css/layout.css', './css/app.css', './css/week-views.css', './css/images.css', './css/habits.css', './css/budget.css', './css/ideas.css',
   './icons/icon-192.png', './icons/apple-touch-icon.png',
 ];
 

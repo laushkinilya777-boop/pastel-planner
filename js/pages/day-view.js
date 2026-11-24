@@ -7,6 +7,7 @@ import { icon } from '../ui/icons.js';
 import { renderImageOfDay } from '../ui/image-of-day.js';
 import { celebrate } from '../ui/celebrate.js';
 import { renderTodayHabits } from '../ui/habit-ui.js';
+import { ideasForDate, platformLabel } from '../ideas.js';
 import { dayMood } from '../mood.js';
 import { sortTasks, dayProgress, newTaskDraft } from '../tasks.js';
 import { addDays, todayISO, parseISODate, formatDayTitle } from '../dates.js';
@@ -35,6 +36,7 @@ export function renderDay(root, { date, mode, user }) {
         <button class="btn" type="button" data-act="new">${icon('plus', 18)}Задача со временем</button>
       </div>
     </section>
+    <div id="day-ideas"></div>
     <div id="day-habits"></div>
     <div id="image-of-day"></div>`;
 
@@ -69,6 +71,11 @@ export function renderDay(root, { date, mode, user }) {
   let iodKey = null;
   async function refresh() {
     renderSwitch();
+    // публикации идей на этот день
+    const pubs = ideasForDate(await store.list('ideas'), current);
+    const ib = root.querySelector('#day-ideas');
+    ib.innerHTML = pubs.length ? `<section class="panel"><div class="panel-title">${icon('idea', 18)}Публикации</div><div class="day-ideas">${pubs.map((i) =>
+      `<a class="day-idea" href="#/ideas">${i.status === 'published' ? icon('check', 14) : ''}${i.title.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]))} · ${platformLabel(i.platform)}</a>`).join('')}</div></section>` : '';
     const habitsBox = root.querySelector('#day-habits');
     if (current <= todayISO()) renderTodayHabits(habitsBox, current); else habitsBox.innerHTML = '';
     const d = parseISODate(current);
@@ -112,6 +119,7 @@ export function renderDay(root, { date, mode, user }) {
   let timer;
   const off = store.on('change', (table) => {
     if (table === 'tasks') { clearTimeout(timer); timer = setTimeout(refresh, 60); }
+    if (table === 'ideas') { clearTimeout(timer); timer = setTimeout(refresh, 60); }
     if (table === 'habits' || table === 'habit_logs') { if (current <= todayISO()) renderTodayHabits(root.querySelector('#day-habits'), current); }
     if (table === 'images') { iodKey = null; clearTimeout(timer); timer = setTimeout(refresh, 60); }
   });

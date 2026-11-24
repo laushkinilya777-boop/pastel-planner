@@ -1,0 +1,47 @@
+/* ── идеи для видео ── */
+.ideas-top { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 12px; }
+.ideas-tags { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; flex: 1; }
+.tag-chip { flex: none; min-height: 34px; padding: 0 12px; border: 0; border-radius: 999px; cursor: pointer; font-size: 13px; background: var(--glass); color: var(--ink-2); box-shadow: inset 0 0 0 1px var(--glass-edge); }
+.tag-chip[aria-pressed="true"] { background: var(--plum); color: #fff; }
+.ideas-tabs { display: flex; width: 100%; margin-bottom: 12px; }
+.ideas-tabs button { flex: 1; padding: 0 4px; font-size: 12.5px; white-space: nowrap; }
+.ideas-tabs .cnt { margin-left: 4px; min-width: 18px; height: 18px; }
+.cnt { display: inline-grid; place-items: center; min-width: 20px; height: 20px; margin-left: 6px; padding: 0 5px; border-radius: 999px; font-size: 11px; background: rgba(var(--tint), .12); color: inherit; }
+.board { display: grid; gap: 12px; }
+.col { display: none; }
+.col.active { display: grid; gap: 10px; align-content: start; }
+.col-h { display: none; }
+.idea-card {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px; padding: 14px; border-radius: 22px;
+  background: var(--glass); border: 1px solid var(--glass-edge); box-shadow: var(--shadow); border-left: 5px solid var(--lilac);
+}
+.idea-card.st-script { border-left-color: var(--peri); }
+.idea-card.st-shooting { border-left-color: var(--apricot); }
+.idea-card.st-published { border-left-color: var(--mint); opacity: .85; }
+.ic-open { display: grid; gap: 6px; padding: 0; border: 0; background: none; text-align: left; cursor: pointer; color: var(--ink); min-width: 0; }
+.ic-open b { font-weight: 600; font-size: 16px; }
+.ic-meta { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.pf { font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: var(--pink); color: #c34a7a; }
+.pf-tiktok { background: #dff4f4; color: #1f8f8f; }
+.pf-both { background: linear-gradient(90deg, var(--pink), #dff4f4); color: var(--ink-2); }
+.ic-date { font-size: 12px; color: var(--ink-2); }
+.ic-date.overdue { color: var(--red-date); font-weight: 600; }
+.ic-hook { font-size: 14px; color: var(--ink-2); font-style: italic; }
+.ic-tags { font-size: 12px; color: var(--violet); }
+.ic-move { display: grid; gap: 6px; align-content: start; }
+.ic-move .icon-btn { width: 38px; height: 38px; }
+.ic-move .icon-btn:disabled { opacity: .3; }
+.st-seg { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.st-seg button { padding: 0 4px; font-size: 12px; }
+
+@media (min-width: 900px) {
+  .ideas-tabs { display: none; }
+  .board { grid-template-columns: repeat(4, minmax(0, 1fr)); align-items: start; }
+  .col { display: grid; gap: 10px; align-content: start; padding: 12px; border-radius: 24px; background: rgba(255, 255, 255, .35); min-height: 200px; }
+  .col-h { display: flex; align-items: center; gap: 6px; margin: 0 2px 2px; font-family: var(--f-body); font-size: 14px; font-weight: 600; color: var(--ink-2); }
+  .app:has(.board) { max-width: 1200px; }
+}
+
+/* публикации на странице дня */
+.day-ideas { display: flex; flex-wrap: wrap; gap: 8px; }
+.day-idea { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 14px; border: 0; border-radius: 999px; cursor: pointer; background: var(--pink); color: var(--ink); font-weight: 500; }

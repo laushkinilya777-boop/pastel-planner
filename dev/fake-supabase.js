@@ -49,6 +49,11 @@ const db = {
     { id: 'p1', month: today.slice(0, 8) + '01', category: 'Продукты', kind: 'expense', planned: 10000, sort: 1 },
     { id: 'p2', month: today.slice(0, 8) + '01', category: 'Кафе', kind: 'expense', planned: 1500, sort: 2 },
   ],
+  ideas: [
+    { id: 'v1', title: 'Мой вечерний уход за кожей', hook: 'Я перестала смывать макияж водой — и вот что случилось', platform: 'both', tags: ['уход', 'вечер'], status: 'script', publish_date: today, created_at: now() },
+    { id: 'v2', title: '5 привычек, которые изменили моё утро', platform: 'reels', tags: ['утро'], status: 'idea', created_at: now() },
+    { id: 'v3', title: 'Котик против пылесоса', platform: 'tiktok', tags: ['котик'], status: 'published', created_at: now() },
+  ],
   habits: [
     { id: 'h1', title: 'Вода 2 л', color: 'sky', weekdays: null, archived: false, sort: 1 },
     { id: 'h2', title: 'Чтение 20 минут', color: 'lilac', weekdays: null, archived: false, sort: 2 },
