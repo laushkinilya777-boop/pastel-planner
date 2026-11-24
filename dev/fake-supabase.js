@@ -73,8 +73,12 @@ function query(table) {
     maybeSingle() { return Promise.resolve({ data: q._rows()[0] || null, error: null }); },
     _rows() { return db[table].filter((r) => q._filters.every(([c, v]) => r[c] === v)); },
     then(res, rej) { return Promise.resolve({ data: structuredClone(q._rows()), error: null }).then(res, rej); },
-    upsert(row) {
+    upsert(row, opts = {}) {
       const key = table === 'settings' ? 'user_id' : 'id';
+      if (Array.isArray(row)) {
+        for (const r of row) { if (!(opts.ignoreDuplicates && db[table].some((x) => x[key] === r[key]))) q.upsert(r); }
+        return Promise.resolve({ data: null, error: null });
+      }
       const i = db[table].findIndex((r) => r[key] === row[key]);
       if (i >= 0) db[table][i] = { ...db[table][i], ...row }; else db[table].push({ ...row });
       return Promise.resolve({ data: null, error: null });

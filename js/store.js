@@ -35,7 +35,13 @@ export function createStore({ client, indexedDB = globalThis.indexedDB, dbName =
       for (const t of TABLES) if (!db.objectStoreNames.contains(t)) db.createObjectStore(t, { keyPath: KEYS[t] || 'id' });
       if (!db.objectStoreNames.contains('outbox')) db.createObjectStore('outbox', { keyPath: 'seq', autoIncrement: true });
     };
-    open.onsuccess = () => resolve(open.result);
+    open.onsuccess = () => {
+      const db = open.result;
+      // открылась новая версия сайта в другой вкладке — освобождаем базу и перезагружаемся
+      db.onversionchange = () => { db.close(); if (typeof location !== 'undefined') location.reload(); };
+      resolve(db);
+    };
+    open.onblocked = () => emit('error', { message: 'Закрой другие вкладки планера, чтобы обновление завершилось' });
     open.onerror = () => reject(open.error);
   });
 

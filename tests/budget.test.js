@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { monthStart, monthSummary, jarBalance, planForNewMonth, suggestions, formatMoney, prevMonth } from '../js/budget.js';
+import { monthStart, monthSummary, jarBalance, planForNewMonth, suggestions, formatMoney, prevMonth, nextMonth } from '../js/budget.js';
 
 const E = (date, kind, amount, extra = {}) => ({ id: `${date}${kind}${amount}`, date, kind, amount, ...extra });
 const entries = [
@@ -62,4 +62,18 @@ test('suggestions: частые названия первыми, без повт
 test('formatMoney: рубли с пробелами', () => {
   assert.match(formatMoney(45000), /^45\s000\s₽$/);
   assert.match(formatMoney(1234.5), /^1\s234,5\s₽$/);
+});
+
+test('fix I2: копейки без хвостов — нет «−0 ₽» и ложного перерасхода', () => {
+  const es = [E('2026-11-01', 'income', 0.3), E('2026-11-02', 'expense', 0.1, { target: 'А' }), E('2026-11-03', 'expense', 0.2, { target: 'А' })];
+  const s = monthSummary(es, [{ month: '2026-11-01', category: 'А', kind: 'expense', planned: 0.3 }], '2026-11-01');
+  assert.equal(s.left, 0);
+  assert.equal(s.rows[0].left, 0);
+  assert.doesNotMatch(formatMoney(-0), /[−-]/);
+  assert.equal(jarBalance({ id: 'j' }, [E('2026-11-01', 'save', 0.1, { jar_id: 'j' }), E('2026-11-02', 'save', 0.2, { jar_id: 'j' })]), 0.3);
+});
+
+test('fix C2: шаг месяца для привычек', () => {
+  assert.equal(nextMonth('2026-12-01'), '2027-01-01');
+  assert.equal(prevMonth(prevMonth('2026-11-01')), '2026-09-01');
 });

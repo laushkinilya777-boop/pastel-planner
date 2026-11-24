@@ -46,3 +46,8 @@ test('todayHabits: запланированные на сегодня, без а
   const hs = [daily, mwf, { id: 'h3', weekdays: null, archived: true }];
   assert.deepEqual(todayHabits(hs, '2026-11-24').map((h) => h.id), ['h1']);
 });
+
+test('fix: дни до создания привычки не считаются пропущенными', () => {
+  const h = { id: 'h9', weekdays: null, created_at: '2026-11-24T10:00:00Z' };
+  assert.deepEqual(weekStates(h, [], '2026-11-23', '2026-11-24').slice(0, 3), ['off', 'todo', 'todo']);
+});

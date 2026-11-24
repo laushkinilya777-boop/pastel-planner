@@ -4,14 +4,18 @@ import { icon } from '../ui/icons.js';
 import { toggleHabit, openHabitEditor } from '../ui/habit-ui.js';
 import { habitColor, streak, weekStates, monthStates } from '../habits.js';
 import { weekStart, weekDays, addDays, todayISO, parseISODate, formatMonthTitle } from '../dates.js';
+import { monthStart, prevMonth, nextMonth } from '../budget.js';
 
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const WD = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
 let shownWeek = null;
+let shownMonth = null; // 'YYYY-MM-01' для вида «Месяц»
+const MONTHS_GEN = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'];
 let mode = 'week';
 
 export function render(root) {
   shownWeek ??= weekStart(todayISO());
+  shownMonth ??= monthStart(todayISO());
   root.innerHTML = `
     <div class="period-head">
       <button class="icon-btn" data-nav="-1" aria-label="Назад">${icon('chevronLeft')}</button>
@@ -33,7 +37,7 @@ export function render(root) {
   root.querySelectorAll('[data-nav]').forEach((b) => b.addEventListener('click', () => {
     const k = Number(b.dataset.nav);
     if (mode === 'week') shownWeek = addDays(shownWeek, 7 * k);
-    else { const d = parseISODate(shownWeek); d.setMonth(d.getMonth() + k, 1); shownWeek = weekStart(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`); }
+    else shownMonth = k < 0 ? prevMonth(shownMonth) : nextMonth(shownMonth);
     refresh();
   }));
 
@@ -43,11 +47,12 @@ export function render(root) {
     const [habits, logs] = await Promise.all([store.list('habits'), store.list('habit_logs')]);
     const list = habits.filter((h) => !h.archived).sort((a, b) => (a.sort || 0) - (b.sort || 0));
     const days = weekDays(shownWeek);
-    // для месяца берём месяц четверга показанной недели — так неделя на стыке относится к «своему» месяцу
-    const ref = parseISODate(days[3]);
-    const y = ref.getFullYear(); const m = ref.getMonth() + 1;
+    const y = Number(shownMonth.slice(0, 4)); const m = Number(shownMonth.slice(5, 7));
+    const a = parseISODate(days[0]); const b = parseISODate(days[6]);
     root.querySelector('.period-sub').textContent = mode === 'week'
-      ? `${parseISODate(days[0]).getDate()}–${parseISODate(days[6]).getDate()} ${formatMonthTitle(parseISODate(days[6]).getFullYear(), parseISODate(days[6]).getMonth() + 1).split(' ')[0].toLowerCase()}`
+      ? (a.getMonth() === b.getMonth()
+        ? `${a.getDate()}–${b.getDate()} ${MONTHS_GEN[b.getMonth()]}`
+        : `${a.getDate()} ${MONTHS_GEN[a.getMonth()]} – ${b.getDate()} ${MONTHS_GEN[b.getMonth()]}`)
       : formatMonthTitle(y, m);
 
     if (!list.length) {

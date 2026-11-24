@@ -30,6 +30,7 @@ export function streak(habit, logs, today) {
 
 function state(habit, done, day, today) {
   if (!isDue(habit, day)) return 'off';
+  if (habit.created_at && day < String(habit.created_at).slice(0, 10) && !done.has(day)) return 'off'; // привычки ещё не было
   if (done.has(day)) return 'done';
   return day < today ? 'missed' : 'todo';
 }

@@ -3,7 +3,7 @@ export const STATUSES = [
   { id: 'idea', name: 'Идея', icon: 'idea' },
   { id: 'script', name: 'Сценарий', icon: 'edit' },
   { id: 'shooting', name: 'Снимаю', icon: 'gallery' },
-  { id: 'published', name: 'Опубликовано', icon: 'check' },
+  { id: 'published', name: 'Опубликовано', short: 'Готово', icon: 'check' },
 ];
 
 export function shiftStatus(status, dir) {

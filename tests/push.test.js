@@ -31,3 +31,7 @@ test('buildPayload: текст напоминания', () => {
   });
   assert.equal(buildPayload({ task_id: 't1', title: 'Йога', time: '09:00:00', remind_minutes: 15 }).tag, 'task-t1');
 });
+
+test('buildPayload: напоминание к сроку говорит «до»', () => {
+  assert.equal(buildPayload({ title: 'Сдать', time: '18:00:00', remind_minutes: 15, is_due: true }).body, 'до 18:00 · осталось 15 мин');
+});

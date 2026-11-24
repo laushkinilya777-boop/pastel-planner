@@ -1,5 +1,5 @@
 // Бюджет: остаток месяца, план по категориям, копилки, откуда пришли деньги, записи.
-import { store } from '../supabase.js';
+import { client, store } from '../supabase.js';
 import { icon } from '../ui/icons.js';
 import { createDayRing, setDayRing, createLiquid } from '../ui/progress.js';
 import { openEntryEditor, openPlanRow, openJar, JAR_COLORS } from '../ui/budget-ui.js';
@@ -57,15 +57,10 @@ export function render(root) {
     const d = parseISODate(month);
     root.querySelector('.period-sub').textContent = formatMonthTitle(d.getFullYear(), d.getMonth() + 1);
 
-    // новый месяц: план заводится сам по прошлому (только для текущего и будущих месяцев)
-    if (!copying && month >= monthStart(todayISO()) && !plans.some((p) => p.month === month)) {
-      const prev = plans.filter((p) => p.month === prevMonth(month));
-      if (prev.length) {
-        copying = true;
-        for (const row of planForNewMonth(prev, month)) await store.upsert('budget_plans', { ...row, created_at: new Date().toISOString() });
-        copying = false;
-        return; // перерисуется по событию change
-      }
+    // новый месяц: план переносится сам по прошлому — один раз, только в текущий месяц
+    if (!copying && month === monthStart(todayISO()) && !plans.some((p) => p.month === month)) {
+      copying = true;
+      try { if (await copyPlanOnce()) return; } finally { copying = false; }
     }
 
     const s = monthSummary(entries, plans, month);
@@ -132,6 +127,26 @@ export function render(root) {
       row.addEventListener('click', () => openEntryEditor({ entry: e }));
       box.appendChild(row);
     }
+  }
+
+  // Перенос плана прошлого месяца: только с интернетом, по свежим данным с сервера,
+  // без перезаписи уже существующих строк, и отметка в settings — чтобы удалённое не возвращалось.
+  async function copyPlanOnce() {
+    if (navigator.onLine === false) return false;
+    await Promise.all([store.refresh('budget_plans'), store.refresh('settings')]);
+    const settings = (await store.list('settings'))[0];
+    if ((settings?.plans_copied || []).includes(month)) return false;
+    const fresh = await store.list('budget_plans');
+    if (fresh.some((p) => p.month === month)) return false;
+    const prev = fresh.filter((p) => p.month === prevMonth(month));
+    if (prev.length) {
+      const rows = planForNewMonth(prev, month).map((r) => ({ ...r, created_at: new Date().toISOString() }));
+      const { error } = await client.from('budget_plans').upsert(rows, { onConflict: 'id', ignoreDuplicates: true });
+      if (error) return false;
+    }
+    if (settings) await store.patch('settings', settings.user_id, { plans_copied: [...(settings.plans_copied || []), month] });
+    await store.refresh('budget_plans');
+    return prev.length > 0;
   }
 
   // категория, которой нет в плане: сразу добавить её с суммой

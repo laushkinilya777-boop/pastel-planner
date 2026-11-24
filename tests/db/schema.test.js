@@ -110,3 +110,14 @@ test('extras 2: свои категории картинок под RLS', async 
   const rows = await asUser(db, B, async (d) => (await d.query('select * from image_categories')).rows);
   assert.equal(rows.length, 0);
 });
+
+test('fix C1: sort = Date.now() помещается в habits и budget_plans', async () => {
+  const db = await makeDb();
+  await db.query(`insert into habits (user_id, title, sort) values ($1, 'Вода', $2)`, [A, Date.now()]);
+  await db.query(`insert into budget_plans (user_id, month, category, planned, sort) values ($1, '2026-11-01', 'Еда', 1000, $2)`, [A, Date.now()]);
+});
+
+test('fix: settings.plans_copied хранит месяцы, куда план уже перенесён', async () => {
+  const db = await makeDb();
+  await db.query(`insert into settings (user_id, plans_copied) values ($1, array['2026-12-01']::date[])`, [A]);
+});

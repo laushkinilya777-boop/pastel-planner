@@ -4,10 +4,12 @@ import webpush from 'npm:web-push@3.6.7';
 import { createClient } from 'npm:@supabase/supabase-js@2.49.4';
 
 // тот же текст, что в payload.js (там он покрыт тестами)
-function buildPayload({ task_id, title, time, remind_minutes }: { task_id?: string; title: string; time: string; remind_minutes: number }) {
+function buildPayload({ task_id, title, time, remind_minutes, is_due }: { task_id?: string; title: string; time: string; remind_minutes: number; is_due?: boolean }) {
   return {
     title,
-    body: `в ${String(time).slice(0, 5)} · через ${remind_minutes} мин`,
+    body: is_due
+      ? `до ${String(time).slice(0, 5)} · осталось ${remind_minutes} мин`
+      : `в ${String(time).slice(0, 5)} · через ${remind_minutes} мин`,
     url: './#/today',
     tag: task_id ? `task-${task_id}` : undefined,
   };

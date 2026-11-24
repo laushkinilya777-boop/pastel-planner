@@ -30,7 +30,7 @@ export function render(root) {
     const ideas = tagFilter ? all.filter((i) => (i.tags || []).includes(tagFilter)) : all;
     const g = byStatus(ideas);
     root.querySelector('.ideas-tabs').innerHTML = STATUSES.map((s) =>
-      `<button role="tab" data-tab="${s.id}" aria-selected="${s.id === tab}">${s.name}<span class="cnt">${g[s.id].length}</span></button>`).join('');
+      `<button role="tab" data-tab="${s.id}" aria-selected="${s.id === tab}" aria-label="${s.name}">${s.short || s.name}<span class="cnt">${g[s.id].length}</span></button>`).join('');
     root.querySelectorAll('[data-tab]').forEach((b) => b.addEventListener('click', () => { tab = b.dataset.tab; refresh(); }));
 
     const board = root.querySelector('.board');
@@ -94,7 +94,7 @@ export function openIdea(idea = {}) {
             </div></div>
           <div class="lbl">Статус
             <div class="segmented kind st-seg" role="radiogroup">
-              ${STATUSES.map((s) => `<button type="button" data-st="${s.id}" aria-selected="${s.id === status}">${s.name}</button>`).join('')}
+              ${STATUSES.map((s) => `<button type="button" data-st="${s.id}" aria-selected="${s.id === status}" aria-label="${s.name}">${s.short || s.name}</button>`).join('')}
             </div></div>
           <div class="grid2">
             <label class="lbl">Дата публикации<input class="field" type="date" name="date" value="${i.publish_date || ''}"></label>

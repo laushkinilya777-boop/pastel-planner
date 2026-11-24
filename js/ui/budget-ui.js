@@ -62,6 +62,12 @@ export async function openEntryEditor({ entry = null, kind = 'expense', date = t
         const err = body.querySelector('.auth-error');
         const amount = money(f.amount.value);
         if (!(amount > 0)) { err.textContent = 'Введи сумму больше нуля'; f.amount.focus(); return; }
+        if (amount > 1e9) { err.textContent = 'Слишком большая сумма'; return; }
+        if (k === 'withdraw') {
+          const jar = jars.find((j) => j.id === f.jar.value);
+          const bal = jar ? jarBalance(jar, all.filter((x) => x.id !== entry?.id)) : 0;
+          if (amount > bal + 0.001) { err.textContent = `В копилке только ${formatMoney(bal)}`; return; }
+        }
         if ((k === 'save' || k === 'withdraw') && !f.jar.value) { err.textContent = 'Сначала создай копилку'; return; }
         const row = {
           kind: k, amount, date: f.date.value || todayISO(), note: f.note.value.trim() || null,

@@ -14,11 +14,14 @@ export function nextMonth(m) {
 
 const norm = (s) => String(s || '').trim().toLowerCase();
 const num = (v) => Number(v) || 0;
+// считаем в копейках (целые числа), чтобы не было хвостов вроде 0,30000000000000004
+const kop = (v) => Math.round(num(v) * 100);
+const rub = (k) => (k === 0 ? 0 : k / 100);
 const inMonth = (e, m) => e.date && e.date.slice(0, 7) === m.slice(0, 7);
 
 export function monthSummary(entries, plans, month) {
   const es = entries.filter((e) => inMonth(e, month));
-  const sum = (kind) => es.filter((e) => e.kind === kind).reduce((a, e) => a + num(e.amount), 0);
+  const sum = (kind) => es.filter((e) => e.kind === kind).reduce((a, e) => a + kop(e.amount), 0);
   const income = sum('income');
   const expense = sum('expense');
   const saved = sum('save') - sum('withdraw');
@@ -27,40 +30,40 @@ export function monthSummary(entries, plans, month) {
   // категории расходов: из плана + встретившиеся в записях
   const rows = new Map();
   for (const p of monthPlans.filter((x) => x.kind !== 'save')) {
-    rows.set(norm(p.category), { category: p.category, planned: num(p.planned), spent: 0, plan: p });
+    rows.set(norm(p.category), { category: p.category, planned: kop(p.planned), spent: 0, plan: p });
   }
   for (const e of es.filter((x) => x.kind === 'expense')) {
     const k = norm(e.target) || 'без категории';
     if (!rows.has(k)) rows.set(k, { category: e.target?.trim() || 'Без категории', planned: 0, spent: 0, plan: null });
-    rows.get(k).spent += num(e.amount);
+    rows.get(k).spent += kop(e.amount);
   }
   const list = [...rows.values()]
-    .map((r) => ({ ...r, left: r.planned - r.spent }))
+    .map((r) => ({ ...r, planned: rub(r.planned), spent: rub(r.spent), left: rub(r.planned - r.spent) }))
     .sort((a, b) => (b.planned - a.planned) || (b.spent - a.spent));
 
   const src = new Map();
   for (const e of es.filter((x) => x.kind === 'income')) {
     const k = norm(e.source) || 'без названия';
     if (!src.has(k)) src.set(k, { name: e.source?.trim() || 'Без названия', sum: 0 });
-    src.get(k).sum += num(e.amount);
+    src.get(k).sum += kop(e.amount);
   }
 
   const plannedExpense = list.reduce((a, r) => a + r.planned, 0);
-  const plannedSave = monthPlans.filter((p) => p.kind === 'save').reduce((a, p) => a + num(p.planned), 0);
+  const plannedSave = rub(monthPlans.filter((p) => p.kind === 'save').reduce((a, p) => a + kop(p.planned), 0));
   return {
-    income, expense, saved,
-    left: income - expense - saved,
+    income: rub(income), expense: rub(expense), saved: rub(saved),
+    left: rub(income - expense - saved),
     plannedExpense, plannedSave,
     rows: list,
     savePlans: monthPlans.filter((p) => p.kind === 'save'),
-    sources: [...src.values()].sort((a, b) => b.sum - a.sum),
+    sources: [...src.values()].map((x) => ({ ...x, sum: rub(x.sum) })).sort((a, b) => b.sum - a.sum),
   };
 }
 
 // Баланс копилки за всё время: вложили − забрали.
-export const jarBalance = (jar, entries) => entries
+export const jarBalance = (jar, entries) => rub(entries
   .filter((e) => e.jar_id === jar.id)
-  .reduce((a, e) => a + (e.kind === 'save' ? num(e.amount) : e.kind === 'withdraw' ? -num(e.amount) : 0), 0);
+  .reduce((a, e) => a + (e.kind === 'save' ? kop(e.amount) : e.kind === 'withdraw' ? -kop(e.amount) : 0), 0));
 
 // План нового месяца = категории и суммы прошлого; id стабильные — два устройства не задвоят.
 export const planForNewMonth = (prevPlans, month) => prevPlans.map((p, i) => ({
@@ -82,4 +85,4 @@ export function suggestions(entries, field) {
 }
 
 const fmt = new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 2 });
-export const formatMoney = (n) => `${fmt.format(num(n))} ₽`;
+export const formatMoney = (n) => `${fmt.format(Math.abs(num(n)) < 0.005 ? 0 : num(n))} ₽`;

@@ -53,3 +53,10 @@ test('напоминание к сроку, если у задачи нет вр
   const rows = (await db.query(`select task_id from due_reminders('2026-11-23 17:45+03')`)).rows.map((r) => r.task_id);
   assert.ok(rows.includes(t.id));
 });
+
+test('due_reminders отмечает напоминания к сроку (is_due)', async () => {
+  const { db } = await setup();
+  await insertTask(db, { user_id: A, title: 'Сдать', date: '2026-11-23', due_time: '18:00', remind_minutes: 15 });
+  const r = (await db.query(`select title, is_due from due_reminders('2026-11-23 17:45+03')`)).rows;
+  assert.deepEqual(r, [{ title: 'Сдать', is_due: true }]);
+});
