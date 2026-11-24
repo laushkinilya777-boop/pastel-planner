@@ -37,6 +37,13 @@ const db = {
     { id: 'i2', kind: 'link', url: 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=900', category: 'cats', created_at: now() },
   ],
   settings: [{ user_id: uid, tz: 'Europe/Moscow' }],
+  habits: [
+    { id: 'h1', title: 'Вода 2 л', color: 'sky', weekdays: null, archived: false, sort: 1 },
+    { id: 'h2', title: 'Чтение 20 минут', color: 'lilac', weekdays: null, archived: false, sort: 2 },
+    { id: 'h3', title: 'Зарядка', color: 'mint', weekdays: [1, 3, 5], archived: false, sort: 3 },
+  ],
+  habit_logs: [1, 2, 3, 4].map((k) => ({ id: 'l' + k, habit_id: 'h1', date: iso(new Date(Date.now() - k * 86400000)) }))
+    .concat([{ id: 'l9', habit_id: 'h2', date: iso(new Date(Date.now() - 86400000)) }]),
 };
 
 function query(table) {

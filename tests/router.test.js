@@ -45,3 +45,7 @@ test('linkErrorMessage: лимит писем Supabase — про час, а н�
   assert.match(linkErrorMessage('Signups not allowed for otp'), /только для хозяйки/);
   assert.match(linkErrorMessage('Failed to fetch'), /интернет/);
 });
+
+test('parseRoute: новые разделы', () => {
+  for (const n of ['habits', 'budget', 'ideas']) assert.deepEqual(parseRoute(`#/${n}`), { name: n, params: {} });
+});

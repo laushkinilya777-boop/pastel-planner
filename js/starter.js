@@ -1,3 +1,4 @@
+import { stableId } from './ids.js';
 // Стартовый набор: фото с Unsplash (бесплатная лицензия Unsplash) и мотивационные фразы.
 // Хозяйка сама отмечает, какие добавить. У каждой картинки постоянный id, поэтому дубликатов не будет.
 
@@ -70,15 +71,7 @@ export const STARTER = [
   ].map(([text, mood]) => ({ key: `quote:${text}`, kind: 'quote', category: 'motivation', text, group: 'quotes', mood })),
 ];
 
-// Постоянный UUID из ключа (FNV-1a, 4 прохода с разной «солью»).
-export function starterId(key) {
-  const hex = [0, 1, 2, 3].map((salt) => {
-    let h = 0x811c9dc5 ^ salt;
-    for (const ch of `starter:${salt}:${key}`) { h ^= ch.codePointAt(0); h = Math.imul(h, 0x01000193) >>> 0; }
-    return h.toString(16).padStart(8, '0');
-  }).join('');
-  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-4${hex.slice(13, 16)}-a${hex.slice(17, 20)}-${hex.slice(20, 32)}`;
-}
+export const starterId = (key) => stableId(key);
 
 export function starterRow(item) {
   return item.kind === 'quote'

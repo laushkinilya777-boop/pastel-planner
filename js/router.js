@@ -1,5 +1,5 @@
 // Адреса страниц: #/today, #/week, #/month, #/images, #/day/YYYY-MM-DD
-const SIMPLE = new Set(['today', 'week', 'month', 'images']);
+const SIMPLE = new Set(['today', 'week', 'month', 'habits', 'budget', 'ideas', 'images']);
 
 export function parseRoute(hash) {
   const parts = String(hash || '').replace(/^#\/?/, '').split('/');

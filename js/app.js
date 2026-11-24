@@ -22,6 +22,9 @@ const PAGES = {
   day: () => import('./pages/day.js').catch(offline('День', 'sun')),
   week: () => import('./pages/week.js').catch(offline('Неделя', 'week')),
   month: () => import('./pages/month.js').catch(offline('Месяц', 'month')),
+  habits: () => import('./pages/habits.js').catch(offline('Привычки', 'habit')),
+  budget: () => import('./pages/budget.js').catch(offline('Бюджет', 'wallet')),
+  ideas: () => import('./pages/ideas.js').catch(offline('Идеи', 'idea')),
   images: () => import('./pages/images.js').catch(offline('Картинки', 'gallery')),
 };
 
