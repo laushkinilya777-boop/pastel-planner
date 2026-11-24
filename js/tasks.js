@@ -3,11 +3,14 @@ import { formatShortDate, isoWeekday, parseISODate } from './dates.js';
 
 export const DEFAULT_REMIND = 15;
 
+// время для сортировки: начало, а если его нет — срок «до»
+const sortTime = (t) => t.time || t.due_time || '';
+
 export function sortTasks(tasks) {
   return [...tasks].sort((a, b) =>
     (a.done - b.done)
-    || ((a.time ? 0 : 1) - (b.time ? 0 : 1))
-    || String(a.time || '').localeCompare(String(b.time || ''))
+    || ((sortTime(a) ? 0 : 1) - (sortTime(b) ? 0 : 1))
+    || String(sortTime(a)).localeCompare(String(sortTime(b)))
     || String(a.created_at || '').localeCompare(String(b.created_at || '')));
 }
 
@@ -29,6 +32,21 @@ export function newTaskDraft({ date, time = null }) {
 export function withTimeChange(task, time) {
   if (!time) return { ...task, time: null, remind_minutes: null };
   return { ...task, time, remind_minutes: task.remind_minutes ?? DEFAULT_REMIND };
+}
+
+// Срок «Сделать до»: метка и просрочка (сегодня после срока или задача из прошлого дня).
+export function dueInfo(task, todayISO, nowHHMM) {
+  if (!task.due_time) return null;
+  const hhmm = task.due_time.slice(0, 5);
+  const overdue = !task.done && (task.date < todayISO || (task.date === todayISO && nowHHMM > hhmm));
+  return { label: `до ${hhmm}`, overdue };
+}
+
+// Срок без времени начала — напоминание по сроку (за 15 мин по умолчанию).
+export function withDueChange(task, due) {
+  const next = { ...task, due_time: due || null };
+  if (task.time) return next;
+  return { ...next, remind_minutes: due ? (task.remind_minutes ?? DEFAULT_REMIND) : null };
 }
 
 export function dayProgress(tasks) {

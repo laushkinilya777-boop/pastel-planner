@@ -80,3 +80,26 @@ test('updated_at обновляется при изменении', async () => 
   const u = (await db.query(`update tasks set note = 'коврик' where id = $1 returning updated_at`, [t.id])).rows[0];
   assert.ok(u.updated_at > new Date('2025-01-01'));
 });
+
+test('extras: новые таблицы под RLS, чужие данные не видны', async () => {
+  const db = await makeDb();
+  for (const t of ['habits', 'savings_jars', 'ideas']) {
+    await db.query(`insert into ${t} (user_id, title) values ($1, 'A')`, [A]);
+    const rows = await asUser(db, B, async (d) => (await d.query(`select * from ${t}`)).rows);
+    assert.equal(rows.length, 0, t);
+  }
+});
+
+test('extras: одна отметка привычки в день', async () => {
+  const db = await makeDb();
+  const h = (await db.query(`insert into habits (user_id, title) values ($1, 'Вода') returning id`, [A])).rows[0];
+  await db.query(`insert into habit_logs (user_id, habit_id, date) values ($1, $2, '2026-11-24')`, [A, h.id]);
+  await assert.rejects(db.query(`insert into habit_logs (user_id, habit_id, date) values ($1, $2, '2026-11-24')`, [A, h.id]));
+});
+
+test('extras: сумма записи бюджета > 0, у задачи есть due_time', async () => {
+  const db = await makeDb();
+  await assert.rejects(db.query(`insert into money_entries (user_id, date, kind, amount) values ($1, '2026-11-24', 'expense', 0)`, [A]));
+  const t = await insertTask(db, { user_id: A, title: 'Отчёт', date: '2026-11-24', due_time: '18:00' });
+  assert.equal(t.due_time, '18:00:00');
+});

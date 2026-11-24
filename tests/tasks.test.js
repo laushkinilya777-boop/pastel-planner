@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  sortTasks, taskBadges, newTaskDraft, withTimeChange, dayProgress, historyLine, recurrenceRule, describeRule,
+  sortTasks, taskBadges, newTaskDraft, withTimeChange, dayProgress, historyLine, recurrenceRule, describeRule, dueInfo, withDueChange,
 } from '../js/tasks.js';
 
 test('sortTasks: со временем по возрастанию, без времени по созданию, выполненные в конце', () => {
@@ -64,4 +64,28 @@ test('describeRule', () => {
   assert.equal(describeRule({ freq: 'weekly', start_date: '2026-11-19' }), 'каждый чт');
   assert.equal(describeRule({ freq: 'monthly', start_date: '2026-11-05' }), 'каждый месяц, 5-го');
   assert.equal(describeRule({ freq: 'yearly', start_date: '2026-03-08' }), 'каждый год, 8 марта');
+});
+
+test('dueInfo: метка «до 18:00» и просрочка только сегодня после срока', () => {
+  const t = { date: '2026-11-24', due_time: '18:00:00', done: false };
+  assert.deepEqual(dueInfo(t, '2026-11-24', '17:59'), { label: 'до 18:00', overdue: false });
+  assert.deepEqual(dueInfo(t, '2026-11-24', '18:01'), { label: 'до 18:00', overdue: true });
+  assert.deepEqual(dueInfo({ ...t, done: true }, '2026-11-24', '19:00'), { label: 'до 18:00', overdue: false });
+  assert.deepEqual(dueInfo({ ...t, date: '2026-11-23' }, '2026-11-24', '09:00'), { label: 'до 18:00', overdue: true });
+  assert.equal(dueInfo({ date: '2026-11-24' }, '2026-11-24', '09:00'), null);
+});
+
+test('sortTasks: задача только со сроком встаёт по сроку', () => {
+  const tasks = [
+    { id: 'a', time: '19:00:00', done: false },
+    { id: 'b', time: null, due_time: '12:00:00', done: false },
+    { id: 'c', time: null, done: false },
+  ];
+  assert.deepEqual(sortTasks(tasks).map((t) => t.id), ['b', 'a', 'c']);
+});
+
+test('withDueChange: срок без времени включает напоминание 15 мин', () => {
+  assert.equal(withDueChange({ time: null, remind_minutes: null }, '18:00').remind_minutes, 15);
+  assert.equal(withDueChange({ time: '09:00', remind_minutes: 30 }, '18:00').remind_minutes, 30);
+  assert.equal(withDueChange({ time: null, remind_minutes: 15 }, '').remind_minutes, null);
 });

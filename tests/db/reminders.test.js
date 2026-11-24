@@ -46,3 +46,10 @@ test('браузер не может вызвать due_reminders', async () => 
   const { db } = await setup();
   await assert.rejects(asUser(db, A, (d) => d.query(`select * from due_reminders(now())`)), /permission denied/);
 });
+
+test('напоминание к сроку, если у задачи нет времени начала', async () => {
+  const { db } = await setup();
+  const t = await insertTask(db, { user_id: A, title: 'Сдать отчёт', date: '2026-11-23', due_time: '18:00', remind_minutes: 15 });
+  const rows = (await db.query(`select task_id from due_reminders('2026-11-23 17:45+03')`)).rows.map((r) => r.task_id);
+  assert.ok(rows.includes(t.id));
+});

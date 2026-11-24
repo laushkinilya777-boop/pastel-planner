@@ -257,3 +257,23 @@ test('I5: refresh, начатый до отправки правки, не от�
   await pending;
   assert.equal((await store.list('tasks'))[0].title, 'Новое');
 });
+
+test('обновление базы браузера с версии 1 сохраняет очередь и добавляет новые таблицы', async () => {
+  const idb = new IDBFactory();
+  await new Promise((res, rej) => {
+    const o = idb.open('up', 1);
+    o.onupgradeneeded = () => {
+      const db = o.result;
+      for (const t of ['tasks', 'goals', 'special_dates', 'recurrences', 'images', 'task_history', 'settings']) db.createObjectStore(t, { keyPath: t === 'settings' ? 'user_id' : 'id' });
+      db.createObjectStore('outbox', { keyPath: 'seq', autoIncrement: true }).add({ op: 'upsert', table: 'tasks', row: { id: 'old', title: 'Старая' } });
+    };
+    o.onsuccess = () => { o.result.close(); res(); };
+    o.onerror = () => rej(o.error);
+  });
+  const client = fakeClient();
+  client.offline = true;
+  const store = createStore({ client, indexedDB: idb, dbName: 'up', autoFlush: false });
+  assert.equal(await store.pendingCount(), 1);
+  await store.upsert('habits', { title: 'Вода' });
+  assert.deepEqual((await store.list('habits')).map((h) => h.title), ['Вода']);
+});

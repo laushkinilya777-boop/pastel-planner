@@ -170,3 +170,15 @@ test('fix I1: «удалить эту и все следующие» убира�
   await db.query(`select end_recurrence_from($1)`, [t.id]);
   assert.deepEqual((await taskDates(db, r.id)).map((x) => x.d), ['2026-11-20', '2026-11-21', '2026-11-22']);
 });
+
+test('extras: срок «до» переходит из правила в дни и меняется через split', async () => {
+  const db = await makeDb();
+  const r = await addRec(db, { title: 'Отчёт', freq: 'daily', start_date: '2026-11-20', due_time: '10:00' });
+  await db.query(`select materialize($1, '2026-11-25')`, [A]);
+  const d = (await db.query(`select due_time::text as d from tasks where recurrence_id = $1 limit 1`, [r.id])).rows[0].d;
+  assert.equal(d, '10:00:00');
+  const t = (await db.query(`select id from tasks where recurrence_id = $1 and occurrence_date = '2026-11-23'`, [r.id])).rows[0];
+  const nid = (await db.query(`select split_recurrence($1, '{"due_time":"12:00"}'::jsonb, '2026-11-25') as id`, [t.id])).rows[0].id;
+  const rows = (await db.query(`select distinct due_time::text as d from tasks where recurrence_id = $1`, [nid])).rows;
+  assert.deepEqual(rows, [{ d: '12:00:00' }]);
+});

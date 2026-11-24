@@ -44,9 +44,11 @@ export async function openTaskEditor({ task = null, date = todayISO(), user }) {
           <input class="field" name="title" placeholder="Что сделать?" aria-label="Название" value="${esc(t.title)}" autofocus required>
           <div class="grid2">
             <label class="lbl">Дата<input class="field" type="date" name="date" value="${t.date}"></label>
-            <label class="lbl">Время<input class="field" type="time" name="time" value="${t.time ? t.time.slice(0, 5) : ''}"></label>
+            <label class="lbl">Время начала<input class="field" type="time" name="time" value="${t.time ? t.time.slice(0, 5) : ''}"></label>
           </div>
-          <label class="lbl remind" ${t.time ? '' : 'hidden'}><span class="lbl-t">${icon('bell', 16)}Напоминание</span>
+          <label class="lbl"><span class="lbl-t">${icon('hourglass', 16)}Сделать до</span>
+            <input class="field" type="time" name="due" value="${t.due_time ? t.due_time.slice(0, 5) : ''}"></label>
+          <label class="lbl remind" ${t.time || t.due_time ? '' : 'hidden'}><span class="lbl-t">${icon('bell', 16)}Напоминание</span>
             <select class="field" name="remind">
               <option value="">без напоминания</option>
               ${[5, 15, 30, 60].map((m) => `<option value="${m}" ${t.remind_minutes === m ? 'selected' : ''}>за ${m} мин</option>`).join('')}
@@ -79,10 +81,13 @@ export async function openTaskEditor({ task = null, date = todayISO(), user }) {
       const f = body.querySelector('form');
       const err = body.querySelector('.auth-error');
       const btn = f.querySelector('[type=submit]');
-      f.time.addEventListener('input', () => {
-        body.querySelector('.remind').hidden = !f.time.value;
-        if (f.time.value && !f.remind.value && t.remind_minutes !== 0) f.remind.value = String(DEFAULT_REMIND);
-      });
+      const syncRemind = () => {
+        const any = f.time.value || f.due.value;
+        body.querySelector('.remind').hidden = !any;
+        if (any && !f.remind.value && t.remind_minutes !== 0) f.remind.value = String(DEFAULT_REMIND);
+      };
+      f.time.addEventListener('input', syncRemind);
+      f.due.addEventListener('input', syncRemind);
       f.repeat.addEventListener('change', () => {
         body.querySelector('.chips').hidden = f.repeat.value !== 'weekdays';
         body.querySelector('.until').hidden = f.repeat.value === 'none';
@@ -98,9 +103,11 @@ export async function openTaskEditor({ task = null, date = todayISO(), user }) {
         const title = f.title.value.trim();
         if (!title) { err.textContent = 'Напиши, что нужно сделать'; f.title.focus(); return; }
         const time = f.time.value || null;
+        const due = f.due.value || null;
+        if (time && due && due <= time) { err.textContent = '«Сделать до» должно быть позже времени начала'; return; }
         const next = {
-          ...t, title, date: f.date.value || t.date, time,
-          remind_minutes: time && f.remind.value ? Number(f.remind.value) : null,
+          ...t, title, date: f.date.value || t.date, time, due_time: due ? `${due}:00` : null,
+          remind_minutes: (time || due) && f.remind.value ? Number(f.remind.value) : null,
           note: f.note.value.trim() || null,
           goal_id: f.goal ? (f.goal.value || null) : t.goal_id,
         };
@@ -120,7 +127,7 @@ export async function openTaskEditor({ task = null, date = todayISO(), user }) {
 }
 
 const RULE_KEYS = ['freq', 'weekdays', 'end_date'];
-const TASK_KEYS = ['title', 'time', 'note', 'remind_minutes', 'goal_id'];
+const TASK_KEYS = ['title', 'time', 'due_time', 'note', 'remind_minutes', 'goal_id'];
 const same = (a, b) => JSON.stringify(a ?? null) === JSON.stringify(b ?? null);
 const timeKey = (v) => (v ? String(v).slice(0, 5) : null);
 
@@ -129,7 +136,7 @@ async function saveTask({ before, next, rec, form, user }) {
   const rule = recurrenceRule(form, next.date);
 
   // новое время или дата — напоминание должно сработать снова
-  if (timeKey(before.time) !== timeKey(next.time) || before.date !== next.date) next.reminded_at = null;
+  if (timeKey(before.time) !== timeKey(next.time) || timeKey(before.due_time) !== timeKey(next.due_time) || before.date !== next.date) next.reminded_at = null;
 
   // 1) обычная задача без повтора
   if (!before.recurrence_id && !rule) {
@@ -142,7 +149,7 @@ async function saveTask({ before, next, rec, form, user }) {
   if (!before.recurrence_id && rule) {
     await online(async () => {
       check(await client.from('recurrences').insert({
-        ...rule, title: next.title, time: next.time, note: next.note,
+        ...rule, title: next.title, time: next.time, due_time: next.due_time, note: next.note,
         remind_minutes: next.remind_minutes, goal_id: next.goal_id,
       }));
       if (before.id) check(await client.from('tasks').delete().eq('id', before.id));
@@ -219,14 +226,14 @@ function diff(before, next) {
   const a = strip(before);
   const b = strip(next);
   const out = {};
-  for (const k of ['title', 'date', 'time', 'note', 'remind_minutes', 'reminded_at', 'goal_id']) {
+  for (const k of ['title', 'date', 'time', 'due_time', 'note', 'remind_minutes', 'reminded_at', 'goal_id']) {
     if (JSON.stringify(a[k] ?? null) !== JSON.stringify(b[k] ?? null)) out[k] = b[k] ?? null;
   }
   return out;
 }
 
 // В базу уходят только колонки таблицы tasks.
-const COLS = ['id', 'title', 'date', 'time', 'note', 'done', 'done_at', 'carry_count', 'remind_minutes', 'reminded_at',
+const COLS = ['id', 'title', 'date', 'time', 'due_time', 'note', 'done', 'done_at', 'carry_count', 'remind_minutes', 'reminded_at',
   'goal_id', 'recurrence_id', 'occurrence_date', 'is_exception', 'created_at', 'user_id'];
 function strip(row) {
   const out = {};
