@@ -12,7 +12,8 @@ const db = {
     { id: 't1', title: 'Йога', date: today, time: '09:00:00', done: false, carry_count: 0, remind_minutes: 15, created_at: now() },
     { id: 't2', title: 'Позвонить маме', date: today, time: '11:30:00', done: true, carry_count: 0, remind_minutes: 15, created_at: now() },
     { id: 't3', title: 'Дописать отчёт', date: today, time: '15:00:00', done: false, carry_count: 2, remind_minutes: null, created_at: now(), note: 'раздел 3 и выводы' },
-    { id: 't4', title: 'Купить корм котику', date: today, time: null, done: false, carry_count: 0, created_at: now() },
+    { id: 't4', title: 'Купить корм котику', date: today, time: null, due_time: '18:00:00', done: false, carry_count: 0, created_at: now() },
+    { id: 't9', title: 'Оплатить интернет', date: today, time: null, due_time: '00:30:00', done: false, carry_count: 0, created_at: now() },
     { id: 't5', title: 'Витамины', date: today, time: '08:00:00', done: false, carry_count: 0, recurrence_id: 'r1', occurrence_date: today, remind_minutes: 15, created_at: now() },
   ].concat([
     { id: 't6', title: 'Маникюр', date: iso(new Date(_d.getTime() + 5 * 86400000)), time: '12:00:00', done: false, carry_count: 0, created_at: now() },
